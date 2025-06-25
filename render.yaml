@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: ralph-agent
+    env: python
+    buildCommand: ""
+    startCommand: python agent_ralph_flexible.py
+    envVars:
+      - fromDotEnv: true
+    autoDeploy: false

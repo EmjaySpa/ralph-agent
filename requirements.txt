@@ -1,0 +1,5 @@
+python-dotenv
+notion-client
+slack_sdk
+Pillow
+requests
