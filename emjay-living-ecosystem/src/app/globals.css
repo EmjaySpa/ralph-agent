@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: theme("colors.oat.50");
+  color: theme("colors.ink.DEFAULT");
+  font-family: theme("fontFamily.sans");
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* A soft, calming ground wash used behind the marketing hero and app shell. */
+.bg-emjay-wash {
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(135, 181, 182, 0.28), transparent 60%),
+    radial-gradient(1000px 700px at 100% 0%, rgba(216, 167, 160, 0.22), transparent 55%),
+    theme("colors.oat.50");
+}
+
+.bg-emjay-wash-soft {
+  background:
+    radial-gradient(900px 500px at 90% -20%, rgba(135, 181, 182, 0.20), transparent 60%),
+    theme("colors.oat.50");
+}
+
+@layer components {
+  .container-emjay {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium
+           transition-all duration-200 focus:outline-none focus-visible:ring-2
+           focus-visible:ring-eucalyptus-400 focus-visible:ring-offset-2 focus-visible:ring-offset-oat-50;
+  }
+  .btn-primary {
+    @apply btn bg-eucalyptus-500 text-oat-50 shadow-soft hover:bg-eucalyptus-600 hover:shadow-lift;
+  }
+  .btn-secondary {
+    @apply btn border border-eucalyptus-300 bg-transparent text-eucalyptus-700 hover:bg-eucalyptus-50;
+  }
+  .btn-ghost {
+    @apply btn text-ink-soft hover:text-ink hover:bg-oat-100;
+  }
+
+  .card {
+    @apply rounded-2xl border border-oat-200 bg-white/80 p-6 shadow-soft backdrop-blur-sm;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-eucalyptus-200
+           bg-eucalyptus-50 px-3 py-1 text-xs font-medium text-eucalyptus-700;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-eucalyptus-600;
+  }
+
+  .link-underline {
+    @apply underline decoration-eucalyptus-300 decoration-1 underline-offset-4 hover:decoration-eucalyptus-500;
+  }
+}
+
+/* Warm, tactile range slider for the check-in flow. */
+.emjay-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    theme("colors.eucalyptus.300"),
+    theme("colors.blush.300")
+  );
+  outline: none;
+}
+.emjay-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 26px;
+  width: 26px;
+  border-radius: 9999px;
+  background: theme("colors.oat.50");
+  border: 3px solid theme("colors.eucalyptus.500");
+  box-shadow: 0 2px 8px rgba(44, 58, 56, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.emjay-range::-webkit-slider-thumb:hover {
+  transform: scale(1.08);
+}
+.emjay-range::-moz-range-thumb {
+  height: 22px;
+  width: 22px;
+  border-radius: 9999px;
+  background: theme("colors.oat.50");
+  border: 3px solid theme("colors.eucalyptus.500");
+  box-shadow: 0 2px 8px rgba(44, 58, 56, 0.2);
+  cursor: pointer;
+}
+
+/* Respect reduced-motion for the breathing orb and fade-ups. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
