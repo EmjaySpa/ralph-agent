@@ -30,6 +30,7 @@ jobs:
   selftest:
     name: Suite self-tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: qa
@@ -54,6 +55,10 @@ jobs:
     # defect look like a broken build.
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
+    # A full 300-page crawl plus 40 rendered pages took ~20 minutes against
+    # production. This ceiling stops a hung or unresponsive site burning the
+    # runner's default 6-hour budget.
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: qa
@@ -67,14 +72,52 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
+      # The suite's exit code is the diagnosis, so capture it rather than
+      # letting the step die on it:
+      #   0  clean
+      #   1  live-site defects found — the tool working, not a broken build
+      #   2  the suite could not run (site unreachable, crawl produced nothing)
+      # A red X means completely different things for 1 and 2, and the GitHub
+      # UI and notification emails show them identically. The verdict step
+      # below spells out which one happened, so nobody has to read the logs to
+      # find out.
       - name: Run QA suite
         id: qa
         run: |
+          set +e
           node src/index.mjs \
             --base-url "${{ github.event.inputs.base_url || 'https://emjaywellness.com.au' }}" \
             --max-pages "${{ github.event.inputs.max_pages || '300' }}" \
             --fail-on "${{ github.event.inputs.fail_on || 'fail' }}" \
             --out ./report
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Verdict
+        if: always()
+        run: |
+          code="${{ steps.qa.outputs.exit_code }}"
+          {
+            case "$code" in
+              0) echo "## QA PASSED" ;;
+              1) echo "## QA FAILED — live-site defects detected"
+                 echo ""
+                 echo "This is the suite working as intended: it found defects on the live site."
+                 echo "It is **not** a broken build and **not** a problem with the QA tooling."
+                 echo "The full report is below and in the \`emjay-qa-report\` artifact." ;;
+              2) echo "## QA COULD NOT RUN"
+                 echo ""
+                 echo "The site could not be crawled, so **no verdict was produced**."
+                 echo "This is an environment or availability problem, not a site-quality result."
+                 echo "Check that the site is up and reachable from GitHub runners, then re-run." ;;
+              *) echo "## QA ended unexpectedly (exit code $code)"
+                 echo ""
+                 echo "Neither a clean pass nor a recognised failure mode. Check the step log." ;;
+            esac
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload reports
         if: always()
@@ -87,3 +130,11 @@ jobs:
       - name: Job summary
         if: always()
         run: cat report/qa-report.md >> "$GITHUB_STEP_SUMMARY" || echo 'No report produced — the crawl did not complete.' >> "$GITHUB_STEP_SUMMARY"
+
+      # Fails the job last, so the verdict, the artifact and the report are all
+      # published even when the run ends red.
+      - name: Fail the job if the suite did
+        if: always() && steps.qa.outputs.exit_code != '0'
+        run: |
+          echo "::error title=Emjay QA::Suite exited ${{ steps.qa.outputs.exit_code }} — see the Verdict section in the job summary."
+          exit 1

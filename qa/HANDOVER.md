@@ -240,7 +240,34 @@ by raising `brand.fonts.unapprovedSeverity` to `'FAIL'`.
 
 ---
 
-## 8. If something breaks
+## 8. When a CI run goes red
+
+A red X on the "Emjay QA" workflow has **two completely different meanings**,
+and the GitHub UI and notification emails show them identically. Open the run
+and read the **Verdict** section at the top of the job summary — it says which
+one happened in plain words. You do not need to read the logs.
+
+| Verdict | Meaning | What to do |
+|---|---|---|
+| **QA FAILED — live-site defects detected** | The suite ran fine and found defects. This is the tool working. | Read the report below the verdict, or download the `emjay-qa-report` artifact. Hand the defects to whoever does site remediation. Nothing is wrong with the QA system. |
+| **QA COULD NOT RUN** | The site could not be crawled, so no verdict exists. | An availability or network problem, not a site-quality result. Check the site is up, then re-run. Never read this as a pass. |
+| **QA ended unexpectedly** | Neither of the above. | Something in the tooling broke. Check the step log and `npm run selftest` locally. |
+
+Two jobs run:
+
+- **Suite self-tests** — checks the QA suite itself. If this is red, the suite
+  is broken and the report cannot be trusted.
+- **QA run** — audits the live site. Red here usually means the site has
+  defects. It deliberately does not run on push, so an ordinary code change is
+  never blocked by a website defect.
+
+A run takes roughly 20 minutes against production (300-page crawl plus 40
+rendered pages). The job is capped at 60 minutes so an unresponsive site cannot
+hang it.
+
+---
+
+## 9. If something breaks
 
 **`npm run selftest` fails.** The suite is broken, not the site. The failing
 test names the check. Fixture site is `tests/fixture-site.mjs`.
@@ -261,7 +288,7 @@ already found and corrected this way.
 
 ---
 
-## 9. Layout
+## 10. Layout
 
 ```
 qa/
