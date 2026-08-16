@@ -1,0 +1,49 @@
+name: Emjay QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      live:
+        description: "Run against the live site (read-only)"
+        type: boolean
+        default: true
+  schedule:
+    - cron: "0 20 * * 1"   # Tuesday 06:00 AEST
+  pull_request:
+    paths:
+      - "qa/**"
+      - ".github/workflows/emjay-qa.yml"
+
+jobs:
+  self-test:
+    name: Suite self-test (no network)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r qa/requirements.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: pytest qa/tests -q
+
+  live-run:
+    name: Live regression run
+    needs: self-test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r qa/requirements.txt
+      - run: python -m playwright install --with-deps chromium
+      - name: Crawl and check emjaywellness.com.au
+        run: python3 qa/run_qa.py --out-dir qa/reports
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emjay-qa-report
+          path: qa/reports/

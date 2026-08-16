@@ -1,0 +1,11 @@
+# Static layer (required)
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=5.0
+PyYAML>=6.0
+pytest>=8.0
+
+# Browser layer (optional but recommended: console errors, mobile overflow,
+# measured contrast, rendered colours and fonts). After installing, run
+# `playwright install chromium` unless a browser is already provisioned.
+playwright>=1.45

@@ -1,0 +1,127 @@
+# Known-defect regression registry
+#
+# Every defect found by a human or by an earlier QA pass gets an entry here so
+# it can never silently come back. Entries are asserted on every run, in
+# addition to the generic checks.
+#
+# status:
+#   open      - not yet fixed. A passing assertion is reported as INFO
+#               ("appears fixed, confirm and flip to fixed").
+#   fixed     - remediated. A failing assertion is a REGRESSION and is always
+#               reported as FAIL, regardless of severity_overrides.
+#   wontfix   - accepted. Reported as INFO only.
+#
+# assert.type (see emjay_qa/checks/known_defects.py):
+#   colour_absent        value: "#2EA3F2"          scope: rendered|static|both
+#   font_absent          value: "Open Sans"        scope: rendered|static|both
+#   text_absent          value: "Emjay Spa"        scope: visible|html|meta|schema
+#   regex_absent         value: "<regex>"          scope: visible|html
+#   url_status           path: "/x/"  expect_status: [301] expect_location: "/y/"
+#   url_not_linked       path_pattern: "/old-page" (no internal link may target it)
+#   selector_absent      selector: ".foo"          url_pattern: optional
+#   selector_present     selector: "main h1"       url_pattern: optional
+#   no_console_errors    url_pattern: "/"
+#   no_horizontal_overflow  url_pattern: "/"
+#   canonical_equals     url_pattern: "/"  value: "https://emjaywellness.com.au/"
+#   meta_robots_absent   value: "noindex"          url_pattern: optional
+#
+# url_pattern is a regex matched against the page path. Omit it to apply the
+# assertion to every crawled page.
+
+defects:
+  - id: EMJ-001
+    title: "Rogue Divi default blue #2EA3F2 in rendered styles"
+    source: "QA brief 2026-08-16"
+    status: open
+    notes: "Flagship rogue colour. Appears wherever Divi module defaults were left untouched."
+    assert:
+      type: colour_absent
+      value: "#2EA3F2"
+      scope: both
+
+  - id: EMJ-002
+    title: "Retired business name 'Emjay Spa & Wellness' still on site"
+    source: "emjay-brand-voice skill: name retired"
+    status: open
+    assert:
+      type: regex_absent
+      value: "Emjay\\s+Spa(\\s*(&|and)\\s*Wellness)?"
+      scope: html
+
+  - id: EMJ-003
+    title: "Gift certificates referenced after removal from offer suite"
+    source: "emjay-offers skill: gift certificates removed"
+    status: open
+    assert:
+      type: regex_absent
+      value: "gift\\s+(certificate|voucher)s?"
+      scope: visible
+
+  - id: EMJ-004
+    title: "Retired offer 'Midweek Reset' still referenced"
+    source: "emjay-offers skill: retired offers"
+    status: open
+    assert:
+      type: text_absent
+      value: "Midweek Reset"
+      scope: visible
+
+  - id: EMJ-005
+    title: "Retired 'standard 90-minute session' still referenced"
+    source: "emjay-offers skill: replaced by I Am At My Limit"
+    status: open
+    assert:
+      type: regex_absent
+      value: "standard\\s+90[\\s-]?minute\\s+session"
+      scope: visible
+
+  - id: EMJ-006
+    title: "Divi default body font Open Sans rendered instead of brand font"
+    source: "QA brief 2026-08-16: unapproved fonts"
+    status: open
+    assert:
+      type: font_absent
+      value: "Open Sans"
+      scope: both
+
+  - id: EMJ-007
+    title: "Home page must carry exactly one H1"
+    source: "QA brief 2026-08-16: H1/H2 structure"
+    status: open
+    assert:
+      type: selector_present
+      selector: "h1"
+      url_pattern: "^/$"
+
+  - id: EMJ-008
+    title: "Home page must be free of JavaScript console errors"
+    source: "QA brief 2026-08-16: console errors"
+    status: open
+    assert:
+      type: no_console_errors
+      url_pattern: "^/$"
+
+  - id: EMJ-009
+    title: "No horizontal overflow at 390px on the home page"
+    source: "QA brief 2026-08-16: mobile overflow"
+    status: open
+    assert:
+      type: no_horizontal_overflow
+      url_pattern: "^/$"
+
+  - id: EMJ-010
+    title: "Home page must not be noindex"
+    source: "QA brief 2026-08-16: index/noindex conflicts"
+    status: open
+    assert:
+      type: meta_robots_absent
+      value: "noindex"
+      url_pattern: "^/$"
+
+  - id: EMJ-011
+    title: "Retired gift certificate URL must not be linked internally"
+    source: "QA brief 2026-08-16: old/retired URLs"
+    status: open
+    assert:
+      type: url_not_linked
+      path_pattern: "gift-(certificate|voucher)"
