@@ -48,6 +48,11 @@ jobs:
   qa:
     name: QA run
     needs: selftest
+    # Deliberately not run on push. This job audits the live site, so it goes
+    # red whenever production has defects — which is its job, not a signal about
+    # the code in the branch. Gating merges on it would make every real site
+    # defect look like a broken build.
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     defaults:
       run:
