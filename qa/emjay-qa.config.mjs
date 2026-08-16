@@ -58,6 +58,10 @@ export default {
       /\?.*replytocom=/i,
       /\/xmlrpc\.php/i,
       /\.(?:zip|dmg|exe|mp4|mov|avi|woff2?|ttf|eot)$/i,
+      // Cloudflare email obfuscation. Injected into markup by Cloudflare and
+      // returns 404 to anything that is not a real browser session, so it is a
+      // guaranteed false positive rather than a broken link.
+      /\/cdn-cgi\//i,
       /#/, // fragment-only duplicates are normalised away, not crawled twice
     ],
     // Query params stripped during URL normalisation (tracking noise).
@@ -378,6 +382,21 @@ export default {
     },
 
     /**
+     * Archive and pagination surfaces. Blog indexes, tag/category/author
+     * archives and /page/2/ URLs are thin and near-identical by construction —
+     * that is what an archive is. Flagging them as content defects buries the
+     * real thin pages, so findings on these URLs are downgraded to INFO.
+     * They remain worth reviewing as an indexation question, not a QA gate.
+     */
+    archivePatterns: [
+      /\/page\/\d+\/?$/i,
+      /\/author\//i,
+      /\/tag\//i,
+      /\/category\//i,
+      /[?&]paged?=/i,
+    ],
+
+    /**
      * Business facts asserted against on-page copy and structured data.
      * CONFIRM-REQUIRED fields are null and report WARNING until filled.
      */
@@ -430,5 +449,14 @@ export default {
     failOn: 'fail',
     // Cap findings printed per check in the console summary.
     consoleFindingsPerCheck: 8,
+
+    /**
+     * A defect in a shared theme template repeats identically on every page.
+     * Collapsing turns 206 copies of one misconfigured viewport tag into a
+     * single finding that says "on 206 pages", so the report counts distinct
+     * defects rather than occurrences. Set to false to see every occurrence.
+     */
+    collapseRepeatedFindings: true,
+    collapseThreshold: 3,
   },
 };

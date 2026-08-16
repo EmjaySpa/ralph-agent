@@ -5,7 +5,71 @@ import { summariseRegressions } from './checks/regressions.mjs';
 
 const ORDER = ['FAIL', 'WARN', 'INFO', 'PASS'];
 
+/**
+ * A site-wide defect in a theme template produces one identical finding per
+ * page. Reported raw, a single misconfigured viewport tag becomes 206 failures
+ * and buries everything else. Collapse identical findings into one, carrying
+ * the page count and a sample of URLs.
+ *
+ * Grouping is by check + severity + title + a URL-stripped detail signature, so
+ * only genuinely repeated findings merge; anything with page-specific substance
+ * in its detail stays separate.
+ */
+export function collapseFindings(findings, { threshold = 3, sampleUrls = 5 } = {}) {
+  const groups = new Map();
+  const order = [];
+
+  for (const f of findings) {
+    const key = `${f.severity}|${f.title}|${signature(f.detail)}`;
+    if (!groups.has(key)) {
+      groups.set(key, { first: f, items: [] });
+      order.push(key);
+    }
+    groups.get(key).items.push(f);
+  }
+
+  const out = [];
+  for (const key of order) {
+    const { first, items } = groups.get(key);
+    if (items.length < threshold) {
+      out.push(...items);
+      continue;
+    }
+    const urls = [...new Set(items.map((i) => i.url).filter(Boolean))];
+    out.push({
+      ...first,
+      title: `${first.title} — on ${urls.length || items.length} page(s)`,
+      detail: [
+        first.detail,
+        `Affects ${urls.length || items.length} page(s), e.g.:`,
+        ...urls.slice(0, sampleUrls).map((u) => `  ${u}`),
+        urls.length > sampleUrls ? `  ...and ${urls.length - sampleUrls} more` : null,
+      ].filter(Boolean).join('\n'),
+      occurrences: items.length,
+      urls,
+    });
+  }
+  return out;
+}
+
+/** Detail text with site URLs and digits removed, so per-page noise groups. */
+function signature(detail) {
+  return String(detail ?? '')
+    .replace(/https?:\/\/\S+/g, '<url>')
+    .replace(/\d+/g, '<n>')
+    .slice(0, 400);
+}
+
 export function buildReport({ results, site, cfg, rendered, regressionOutcomes, meta }) {
+  const collapse = cfg.report?.collapseRepeatedFindings !== false;
+  if (collapse) {
+    results = results.map((r) => ({
+      ...r,
+      rawFindingCount: r.findings.length,
+      findings: collapseFindings(r.findings, { threshold: cfg.report?.collapseThreshold ?? 3 }),
+    }));
+  }
+
   const counts = { FAIL: 0, WARN: 0, INFO: 0, PASS: 0 };
   for (const r of results) {
     for (const f of r.findings) counts[f.severity] = (counts[f.severity] || 0) + 1;
@@ -35,6 +99,8 @@ export function buildReport({ results, site, cfg, rendered, regressionOutcomes, 
       durationMs: r.durationMs,
       error: r.error || null,
       counts: countBy(r.findings),
+      // Distinct defects vs raw occurrences before collapsing.
+      rawFindingCount: r.rawFindingCount ?? r.findings.length,
       findings: r.findings,
     })),
     regressions,

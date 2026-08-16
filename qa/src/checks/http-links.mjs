@@ -71,6 +71,16 @@ export const brokenLinks = {
           detail: `Linked from: ${where}`,
           fix: 'Confirm the destination is alive. Unreachable can also mean the host blocks automated requests.',
         }));
+      } else if (res.status === 403 || res.status === 429) {
+        // Plenty of hosts refuse datacenter or bot traffic outright. That is
+        // not evidence the link is broken, so it never counts as a failure.
+        findings.push(finding({
+          severity: 'WARN',
+          title: `External link returns HTTP ${res.status} to automated requests`,
+          url,
+          detail: `Linked from: ${where}`,
+          fix: 'Likely bot protection rather than a dead link. Open it in a browser to confirm.',
+        }));
       } else if (res.status >= 400) {
         // A dead link on a revenue path is worse than a dead link in a blog body.
         const severity = isRevenuePath(url, cfg) ? 'FAIL' : 'WARN';

@@ -36,7 +36,9 @@ const DELEGATES = {
 // Which finding titles from a delegated check actually prove this defect.
 const DELEGATE_FILTERS = {
   'no-empty-headings': (f) => /empty h\d/i.test(f.title),
-  'h1-count': (f) => /h1/i.test(f.title),
+  // Must not match "Heading level skips H1 -> H3", which is a different defect
+  // owned by its own finding. Anchor on the H1-count wording only.
+  'h1-count': (f) => /^(?:no h1 on page|\d+ h1 tags)/i.test(f.title),
   'self-canonical': (f) => /canonical/i.test(f.title),
   'no-sitemap-noindex-conflict': (f) => /noindex/i.test(f.title) && /sitemap/i.test(f.title + f.detail),
   'sitemap-reachable': (f) => /no reachable xml sitemap/i.test(f.title),
@@ -193,10 +195,17 @@ async function evaluate(defect, ctx) {
       case 'external-url-ok': {
         let res = await http.fetchWithChain(a.url, { method: 'HEAD', wantBody: false });
         if (!res.ok) res = await http.fetchWithChain(a.url, { method: 'GET', wantBody: false });
-        if (!res.ok) {
-          return { status: 'regressed', url: a.url, detail: `HTTP ${res.status || res.error}` };
+        if (res.ok) return { status: 'clear' };
+        // 403/429 from a third-party host usually means it blocks datacenter or
+        // bot traffic, not that the link is dead. Calling that a regression
+        // would put a permanent false FAIL in the register.
+        if (res.status === 403 || res.status === 429) {
+          return {
+            status: 'unknown',
+            detail: `HTTP ${res.status} — the host is refusing automated requests, so this could not be verified. Check it in a browser.`,
+          };
         }
-        return { status: 'clear' };
+        return { status: 'regressed', url: a.url, detail: `HTTP ${res.status || res.error}` };
       }
 
       case 'robots-not-blocking-all': {

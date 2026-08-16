@@ -379,20 +379,28 @@ export const duplicateAndThin = {
     const findings = [];
     const { thinContentWords, thinContentWordsFail, nearDuplicateSimilarity } = cfg.thresholds;
     const pages = site.htmlPages().filter((p) => !p.dom.noindex);
+    const archivePatterns = cfg.content?.archivePatterns || [];
+    const isArchive = (url) => {
+      const path = new URL(url).pathname + new URL(url).search;
+      return archivePatterns.some((re) => re.test(path));
+    };
 
     for (const page of pages) {
       const words = page.dom.mainWordCount;
+      const archive = isArchive(page.finalUrl);
       if (words < thinContentWordsFail) {
         findings.push(finding({
-          severity: 'FAIL',
-          title: `Very thin page (${words} words of main content)`,
+          severity: archive ? 'INFO' : 'FAIL',
+          title: `Very thin page (${words} words of main content)${archive ? ' — archive/pagination surface' : ''}`,
           url: page.finalUrl,
-          fix: 'Expand, merge into a stronger page, or noindex it.',
+          fix: archive
+            ? 'Expected for an archive. Worth reviewing whether it should be indexed at all.'
+            : 'Expand, merge into a stronger page, or noindex it.',
         }));
       } else if (words < thinContentWords) {
         findings.push(finding({
-          severity: 'WARN',
-          title: `Thin page (${words} words of main content)`,
+          severity: archive ? 'INFO' : 'WARN',
+          title: `Thin page (${words} words of main content)${archive ? ' — archive/pagination surface' : ''}`,
           url: page.finalUrl,
         }));
       }
@@ -404,12 +412,17 @@ export const duplicateAndThin = {
         if (!a.dom.shingles.size || !b.dom.shingles.size) continue;
         const sim = jaccard(a.dom.shingles, b.dom.shingles);
         if (sim >= nearDuplicateSimilarity) {
+          // Two archive surfaces listing the same posts are duplicates by
+          // construction, not a content defect.
+          const bothArchives = isArchive(a.finalUrl) && isArchive(b.finalUrl);
           findings.push(finding({
-            severity: sim >= 0.98 ? 'FAIL' : 'WARN',
-            title: `Near-duplicate content (${(sim * 100).toFixed(0)}% similar)`,
+            severity: bothArchives ? 'INFO' : sim >= 0.98 ? 'FAIL' : 'WARN',
+            title: `Near-duplicate content (${(sim * 100).toFixed(0)}% similar)${bothArchives ? ' — both archive surfaces' : ''}`,
             url: a.finalUrl,
             detail: `Duplicate of ${b.finalUrl}`,
-            fix: 'Merge, differentiate, or canonicalise one to the other.',
+            fix: bothArchives
+              ? 'Expected between archives. Review indexation rather than copy.'
+              : 'Merge, differentiate, or canonicalise one to the other.',
           }));
         }
       }

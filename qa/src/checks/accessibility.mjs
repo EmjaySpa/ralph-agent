@@ -171,7 +171,9 @@ export const formStructure = {
       for (const form of page.dom.forms) {
         const label = form.id || form.name || form.action || '(unnamed form)';
 
-        if (cfg.forms.requireSubmitButton && !form.hasSubmit) {
+        // A search form legitimately submits on Enter with no visible button;
+        // requiring one there produces a false failure on every page of a theme.
+        if (cfg.forms.requireSubmitButton && !form.hasSubmit && !form.isSearch) {
           findings.push(finding({
             severity: 'FAIL',
             title: 'Form has no submit control',
