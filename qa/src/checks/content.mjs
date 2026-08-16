@@ -198,6 +198,120 @@ export const bookingIntent = {
   },
 };
 
+export const pricingAccuracy = {
+  id: 'pricing',
+  title: 'Pricing accuracy against Square',
+  /**
+   * Square is the source of truth. This check only reads the website.
+   *
+   * It asserts absence, never presence: a superseded price appearing in live
+   * copy, and a time-bound promotional price still showing after it expires.
+   * It deliberately does not require a given price to be on a given page —
+   * that would break on every layout change and would assert a number the
+   * suite cannot independently verify.
+   */
+  async run({ site, cfg, now = new Date() }) {
+    const findings = [];
+    const pricing = cfg.content.pricing;
+
+    if (!pricing) {
+      return [finding({
+        severity: 'WARN',
+        title: 'No pricing configured',
+        url: cfg.site.baseUrl,
+        detail: 'content.pricing is absent, so no price assertion ran.',
+      })];
+    }
+
+    for (const entry of pricing.superseded || []) {
+      const re = priceRegex(entry.price);
+      for (const page of site.htmlPages()) {
+        const m = page.dom.text.match(re);
+        if (!m) continue;
+        findings.push(finding({
+          severity: entry.severity || 'FAIL',
+          title: `Superseded price ${formatPrice(entry.price)} in live copy`,
+          url: page.finalUrl,
+          detail: `"${context(page.dom.text, m.index)}"${entry.note ? `\n    ${entry.note}` : ''}`,
+          fix: 'Update to the current Square price, or remove the figure.',
+          defectId: `PRICE-${entry.price}`,
+        }));
+      }
+    }
+
+    for (const offer of pricing.timeBound || []) {
+      const expired = isExpired(offer.expiresAt, now, pricing.timezone);
+      const re = priceRegex(offer.price);
+      const hits = [];
+      for (const page of site.htmlPages()) {
+        const m = page.dom.text.match(re);
+        if (m) hits.push({ page, m });
+      }
+
+      if (!hits.length) continue;
+
+      if (expired) {
+        for (const { page, m } of hits) {
+          findings.push(finding({
+            severity: offer.severityAfterExpiry || 'FAIL',
+            title: `Expired promotional price ${formatPrice(offer.price)} still live (${offer.label})`,
+            url: page.finalUrl,
+            detail: `Promotion ended ${offer.expiresAt}. "${context(page.dom.text, m.index)}"${offer.note ? `\n    ${offer.note}` : ''}`,
+            fix: 'Remove the promotional price or update it to the standard price.',
+            defectId: offer.id,
+          }));
+        }
+      } else {
+        const daysLeft = daysUntil(offer.expiresAt, now, pricing.timezone);
+        findings.push(finding({
+          severity: daysLeft <= 14 ? 'WARN' : 'INFO',
+          title: `Promotional price ${formatPrice(offer.price)} expires in ${daysLeft} day(s)`,
+          url: hits[0].page.finalUrl,
+          detail: `${offer.label}. Live on ${hits.length} page(s). Ends ${offer.expiresAt}.${offer.note ? `\n    ${offer.note}` : ''}`,
+          fix: 'Diarise the copy change. This becomes a FAIL the day after it expires.',
+          defectId: offer.id,
+        }));
+      }
+    }
+
+    return findings;
+  },
+};
+
+/** Matches "$180", "$180.00", "180" as a standalone figure, not inside $1,180. */
+function priceRegex(price) {
+  const digits = String(price).replace(/[^0-9]/g, '');
+  return new RegExp(`(?<![\\d,.])\\$?\\s?${digits}(?:\\.00)?(?![\\d,.])`);
+}
+
+function formatPrice(price) {
+  const digits = String(price).replace(/[^0-9]/g, '');
+  return `$${digits}`;
+}
+
+/** Inclusive of the last valid day, evaluated in the configured timezone. */
+function isExpired(expiresAt, now, timezone) {
+  return daysUntil(expiresAt, now, timezone) < 0;
+}
+
+function daysUntil(expiresAt, now, timezone = 'UTC') {
+  const today = localDateString(now, timezone);
+  const a = Date.parse(`${today}T00:00:00Z`);
+  const b = Date.parse(`${expiresAt}T00:00:00Z`);
+  if (Number.isNaN(a) || Number.isNaN(b)) return Infinity;
+  return Math.round((b - a) / 86400000);
+}
+
+function localDateString(date, timezone) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(date);
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
 export const placeholderContent = {
   id: 'placeholder-content',
   title: 'Placeholder, staging and error text in live copy',
@@ -263,4 +377,4 @@ function escapeRe(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export default [retiredUrls, legacyReferences, bookingIntent, placeholderContent];
+export default [retiredUrls, legacyReferences, bookingIntent, pricingAccuracy, placeholderContent];

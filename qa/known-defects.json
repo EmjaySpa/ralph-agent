@@ -51,13 +51,50 @@
     },
     {
       "id": "EMJ-006",
-      "title": "Closed Cleveland location still referenced",
-      "status": "unconfirmed",
+      "title": "Cleveland location present on site (Cleveland is ACTIVE)",
+      "status": "confirmed",
       "severity": "WARN",
       "scope": "site",
-      "source": "emjay-audience / emjay-ceo say Cleveland closes end June 2026; emjay-brand-voice still lists it active",
-      "note": "SOURCES CONFLICT. Confirm with Bel whether Cleveland is closed. If closed, set status to 'confirmed' and severity to 'FAIL'.",
-      "assert": { "type": "text-absent", "pattern": "\\bcleveland\\b", "flags": "i" }
+      "source": "Confirmed 2026-08: Emjay operates in person at Cleveland QLD and online Australia-wide.",
+      "note": "REVERSED 2026-08. This entry previously asserted that Cleveland must be ABSENT, based on skill sources stating a June 2026 closure. Those sources are obsolete. Cleveland is active, so the regression to guard against is Cleveland disappearing from the site, not appearing on it.",
+      "assert": { "type": "text-present", "pattern": "\\bcleveland\\b", "flags": "i" }
+    },
+    {
+      "id": "EMJ-031",
+      "title": "Superseded I Am At My Limit price $250 in live copy",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Square is pricing source of truth; 60 min is $180 in person",
+      "assert": { "type": "price-accuracy", "defectId": "PRICE-250" }
+    },
+    {
+      "id": "EMJ-032",
+      "title": "Superseded I Am At My Limit price $375 in live copy",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Square is pricing source of truth; 90 min is $270",
+      "assert": { "type": "price-accuracy", "defectId": "PRICE-375" }
+    },
+    {
+      "id": "EMJ-033",
+      "title": "Superseded I Am At My Limit price $499 in live copy",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Square is pricing source of truth; 2 hr is $360",
+      "assert": { "type": "price-accuracy", "defectId": "PRICE-499" }
+    },
+    {
+      "id": "PROMO-ONLINE-60",
+      "title": "Expired $140 online promotional price still live after 31 August 2026",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Square: 60 min online $140 promotional until 31 Aug 2026, then $180",
+      "note": "Reports INFO while the promotion is running, WARNING in the final fortnight, FAIL once expired. No config change is needed on the expiry date.",
+      "assert": { "type": "price-accuracy", "defectId": "PROMO-ONLINE-60" }
     },
     {
       "id": "EMJ-007",

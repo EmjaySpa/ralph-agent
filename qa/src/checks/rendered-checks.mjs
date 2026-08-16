@@ -1,5 +1,5 @@
 import { finding } from '../severity.mjs';
-import { parseColour, deltaE, contrastRatio, isLargeText, extractColourLiterals, toHex } from '../colour.mjs';
+import { parseColour, deltaE, chroma, contrastRatio, isLargeText, extractColourLiterals, toHex } from '../colour.mjs';
 
 /** Checks that consume the Playwright render pass. */
 
@@ -79,8 +79,16 @@ export const brandColours = {
   async run({ rendered, site, cfg }) {
     const findings = [];
     const { mode, approved, banned, tolerance, ignore } = cfg.brand.colours;
+    const bannedTolerance = cfg.brand.colours.bannedTolerance ?? tolerance;
+    const unapprovedSeverity = cfg.brand.colours.unapprovedSeverity || 'WARN';
+    const neutralChromaThreshold = cfg.brand.colours.neutralChromaThreshold ?? 0;
+    const nearBrandDeltaE = cfg.brand.colours.nearBrandDeltaE ?? 0;
     const ignoreHexes = new Set(ignore.map((c) => (toHex(parseColour(c)) || String(c).toUpperCase())));
-    const approvedColours = approved.map((c) => ({ raw: c, parsed: parseColour(c) })).filter((c) => c.parsed);
+    // Approved entries may be a bare hex string or {hex, role}.
+    const approvedColours = approved
+      .map((c) => (typeof c === 'string' ? { hex: c, role: null } : c))
+      .map((c) => ({ raw: c.hex, role: c.role || null, parsed: parseColour(c.hex) }))
+      .filter((c) => c.parsed);
 
     if (mode === 'allowlist' && !approvedColours.length) {
       findings.push(finding({
@@ -97,7 +105,7 @@ export const brandColours = {
       for (const block of page.dom.inlineStyleBlocks) sources.push({ label: 'inline <style>', text: block });
       for (const src of sources) {
         for (const literal of extractColourLiterals(src.text)) {
-          const hit = matchBanned(literal.colour, banned, tolerance);
+          const hit = matchBanned(literal.colour, banned, bannedTolerance);
           if (hit) {
             findings.push(finding({
               severity: hit.severity,
@@ -134,7 +142,7 @@ export const brandColours = {
         const parsed = parseColour(entry.hex);
         if (!parsed || ignoreHexes.has(entry.hex.toUpperCase())) continue;
 
-        const hit = matchBanned(parsed, banned, tolerance);
+        const hit = matchBanned(parsed, banned, bannedTolerance);
         if (hit) {
           findings.push(finding({
             severity: hit.severity,
@@ -147,35 +155,44 @@ export const brandColours = {
           continue;
         }
 
-        if (approvedColours.length) {
-          const nearest = approvedColours.reduce(
-            (best, c) => {
-              const d = deltaE(parsed, c.parsed);
-              return d < best.distance ? { distance: d, raw: c.raw } : best;
-            },
-            { distance: Infinity, raw: null },
-          );
-          if (nearest.distance > tolerance) {
-            const key = entry.hex.toUpperCase();
-            const acc = siteWideUnapproved.get(key) || { hex: key, count: 0, pages: new Set(), sample: entry.sample, prop: entry.prop, nearest };
-            acc.count += entry.count;
-            acc.pages.add(url);
-            siteWideUnapproved.set(key, acc);
-          }
-        } else {
-          const key = entry.hex.toUpperCase();
-          const acc = siteWideUnapproved.get(key) || { hex: key, count: 0, pages: new Set(), sample: entry.sample, prop: entry.prop, nearest: null };
-          acc.count += entry.count;
-          acc.pages.add(url);
-          siteWideUnapproved.set(key, acc);
-        }
+        const nearest = approvedColours.length
+          ? approvedColours.reduce(
+              (best, c) => {
+                const d = deltaE(parsed, c.parsed);
+                return d < best.distance ? { distance: d, raw: c.raw, role: c.role } : best;
+              },
+              { distance: Infinity, raw: null, role: null },
+            )
+          : null;
+
+        if (nearest && nearest.distance <= tolerance) continue; // on palette
+
+        const key = entry.hex.toUpperCase();
+        const acc = siteWideUnapproved.get(key) || {
+          hex: key,
+          count: 0,
+          pages: new Set(),
+          sample: entry.sample,
+          prop: entry.prop,
+          nearest,
+          // Greyscale is not a brand decision, so greys are inventoried rather
+          // than flagged — unless the colour sits close to an approved brand
+          // colour, in which case it is a near-miss of the palette and matters
+          // however low its chroma is.
+          neutral:
+            chroma(parsed) < neutralChromaThreshold &&
+            !(nearest && nearest.distance <= nearBrandDeltaE),
+        };
+        acc.count += entry.count;
+        acc.pages.add(url);
+        siteWideUnapproved.set(key, acc);
       }
 
       // Banned colours hiding in stylesheet text that no element currently uses.
       if (collected.cssText) {
         const seen = new Set();
         for (const literal of extractColourLiterals(collected.cssText)) {
-          const hit = matchBanned(literal.colour, banned, tolerance);
+          const hit = matchBanned(literal.colour, banned, bannedTolerance);
           if (hit && !seen.has(hit.hex)) {
             seen.add(hit.hex);
             findings.push(finding({
@@ -192,16 +209,35 @@ export const brandColours = {
 
     const enforcing = mode === 'allowlist' && approvedColours.length > 0;
     const ranked = [...siteWideUnapproved.values()].sort((a, b) => b.count - a.count);
-    for (const entry of ranked.slice(0, enforcing ? 40 : 25)) {
+    const brandColoursOff = ranked.filter((e) => !e.neutral);
+    const neutrals = ranked.filter((e) => e.neutral);
+
+    for (const entry of brandColoursOff.slice(0, enforcing ? 40 : 25)) {
+      const nearest = entry.nearest?.raw
+        ? `\n    Nearest approved: ${entry.nearest.raw}${entry.nearest.role ? ` (${entry.nearest.role})` : ''}, deltaE ${entry.nearest.distance.toFixed(1)}`
+        : '';
       findings.push(finding({
-        severity: enforcing ? 'WARN' : 'INFO',
+        severity: enforcing ? unapprovedSeverity : 'INFO',
         title: enforcing
           ? `Colour ${entry.hex} is not in the approved palette`
           : `Colour in use: ${entry.hex}`,
         url: [...entry.pages][0],
-        detail: `${entry.count} usage(s) across ${entry.pages.size} page(s), e.g. ${entry.prop} on ${entry.sample}` +
-          (entry.nearest?.raw ? `\n    Nearest approved: ${entry.nearest.raw} (deltaE ${entry.nearest.distance.toFixed(1)})` : ''),
-        fix: enforcing ? 'Map to the nearest approved brand colour.' : 'Review this inventory, then fill brand.colours.approved and switch mode to "allowlist".',
+        detail: `${entry.count} usage(s) across ${entry.pages.size} page(s), e.g. ${entry.prop} on ${entry.sample}${nearest}`,
+        fix: enforcing
+          ? 'Map to the nearest approved brand colour.'
+          : 'Review this inventory, then fill brand.colours.approved and switch mode to "allowlist".',
+      }));
+    }
+
+    // Greys are reported as an inventory, not as brand defects.
+    if (enforcing && neutrals.length) {
+      const total = neutrals.reduce((sum, e) => sum + e.count, 0);
+      findings.push(finding({
+        severity: 'INFO',
+        title: `${neutrals.length} neutral grey/near-black colours in use (${total} usages)`,
+        url: [...neutrals[0].pages][0],
+        detail: neutrals.slice(0, 15).map((e) => `${e.hex} (${e.count})`).join(', '),
+        fix: 'Greyscale is outside the brand palette by design. Set brand.colours.neutralChromaThreshold to 0 to enforce the allowlist across greys too.',
       }));
     }
 
@@ -218,6 +254,10 @@ export const brandFonts = {
 
     const findings = [];
     const { mode, approved, banned, ignore } = cfg.brand.fonts;
+    // Font remediation may be deliberately parked, in which case an unapproved
+    // family is a WARNING rather than a blocker. Driven entirely by config.
+    const unapprovedSeverity = cfg.brand.fonts.unapprovedSeverity || 'WARN';
+    const maxDistinctFamilies = cfg.brand.fonts.maxDistinctFamilies ?? 4;
     const approvedSet = new Set(approved.map((f) => f.toLowerCase()));
     const ignoreSet = new Set(ignore.map((f) => f.toLowerCase()));
     const inventory = new Map();
@@ -262,10 +302,13 @@ export const brandFonts = {
       const isApproved = approvedSet.has(entry.family);
       if (enforcing && !isApproved) {
         findings.push(finding({
-          severity: 'WARN',
+          severity: unapprovedSeverity,
           title: `Font "${entry.family}" is not in the approved set`,
           url: [...entry.pages][0],
           detail: `${entry.count} element(s) across ${entry.pages.size} page(s), e.g. ${entry.sample}`,
+          fix: unapprovedSeverity === 'WARN'
+            ? 'Font migration is parked in config (brand.fonts.unapprovedSeverity). Raise to FAIL once the migration is authorised.'
+            : 'Apply an approved brand typeface.',
         }));
       } else if (!enforcing) {
         findings.push(finding({
@@ -278,14 +321,14 @@ export const brandFonts = {
       }
     }
 
-    // More than a handful of distinct families is itself a design defect.
-    if (inventory.size > 4) {
+    // More than a handful of distinct families is itself a design signal.
+    if (inventory.size > maxDistinctFamilies) {
       findings.push(finding({
-        severity: 'WARN',
+        severity: unapprovedSeverity === 'FAIL' ? 'WARN' : 'INFO',
         title: `${inventory.size} distinct font families rendered across the site`,
         url: cfg.site.baseUrl,
         detail: [...inventory.keys()].join(', '),
-        fix: 'A consistent brand normally uses two, at most three.',
+        fix: `Ceiling is brand.fonts.maxDistinctFamilies (${maxDistinctFamilies}), raised while old and new typefaces coexist during migration.`,
       }));
     }
 

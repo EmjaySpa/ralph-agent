@@ -27,7 +27,8 @@ export const SEEDED_DEFECTS = [
   'thin page',
   'near-duplicate page',
   'retired offer references (Midweek Reset, gift certificates)',
-  'legacy location reference (Cleveland)',
+  'superseded price ($250) in live copy',
+  'time-bound promotional price ($140) with an expiry date',
   'generic-only booking link on a service page',
   'form field without a label',
   'form without a submit button',
@@ -55,6 +56,7 @@ ${head}
 <header><nav>
   <a href="/">Home</a>
   <a href="/services/skin-therapy/">Skin Therapy</a>
+  <a href="/services/i-am-at-my-limit/">I Am At My Limit</a>
   <a href="/about/">About</a>
   <a href="/contact/">Contact</a>
 </nav></header>
@@ -125,6 +127,27 @@ const ROUTES = {
         title: 'About — Emjay Wellness',
         head: `<link rel="canonical" href="__BASE__/about/">
 <meta name="description" content="About Belinda Evans, integrated wellness practitioner working with women in midlife across Queensland and online.">`,
+      },
+    ),
+  },
+
+  // Carries a superseded price ($250) and the time-bound promotional price
+  // ($140), so the pricing check has both cases to find.
+  '/services/i-am-at-my-limit/': {
+    body: page(
+      `<h1>I Am At My Limit</h1>
+       <h2>Session lengths</h2>
+       <p>${filler(20)}</p>
+       <ul>
+         <li>60 minutes in person $250</li>
+         <li>60 minutes online $140 promotional</li>
+         <li>90 minutes $270</li>
+       </ul>
+       <p><a href="https://squareup.com/appointments/book/emjay/">Book a session</a></p>`,
+      {
+        title: 'I Am At My Limit — Emjay Wellness',
+        head: `<link rel="canonical" href="__BASE__/services/i-am-at-my-limit/">
+<meta name="description" content="The entry point session for nervous system support, available in person at Tinana and Cleveland or online.">`,
       },
     ),
   },
@@ -211,7 +234,7 @@ const REDIRECTS = {
 };
 
 const SITEMAP_PATHS = [
-  '/', '/services/skin-therapy/', '/about/', '/contact/',
+  '/', '/services/skin-therapy/', '/services/i-am-at-my-limit/', '/about/', '/contact/',
   '/blog/post-one/', '/blog/post-two/', '/blog/post-one-copy/',
   '/thin/', '/orphan/', '/hidden/', '/nolang/',
 ];

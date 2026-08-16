@@ -81,6 +81,7 @@ Every item in the QA brief maps to a check id:
 | Old/retired URLs | `retired-urls` | Asserts redirect / gone / unlinked per entry |
 | Old business & location references | `legacy-references` | Cleveland, retired offers, and more |
 | Generic booking links | `booking-intent` | Service pages that only offer a generic CTA |
+| Pricing against Square | `pricing` | Superseded prices; promotional prices past their expiry |
 | Mobile overflow | `mobile-overflow` | 390px viewport, names the offending elements |
 | Page performance | `performance` | LCP, CLS, TTFB, weight, request count, oversized images |
 | Duplicate / thin pages | `duplicate-thin` | Word count + 5-word-shingle Jaccard similarity |
@@ -107,12 +108,16 @@ Rules:
   unverifiable defect is unproven, not fixed.
 - Entries with `"status": "unconfirmed"` are held: they report INFO instead of
   contributing a verdict, until a human confirms the defect is real.
+- When a defect turns out to be based on an obsolete premise, **reverse the
+  entry rather than deleting it**, and say so in its `note`. `EMJ-006` is the
+  worked example: it once asserted Cleveland must be absent, and now asserts it
+  must be present.
 
 Adding one:
 
 ```json
 {
-  "id": "EMJ-031",
+  "id": "EMJ-034",
   "title": "Short description of the defect",
   "status": "confirmed",
   "severity": "FAIL",
@@ -122,8 +127,9 @@ Adding one:
 }
 ```
 
-Assertion types: `colour-absent`, `source-absent`, `text-absent`, `url-status`,
-`external-url-ok`, `robots-not-blocking-all`, `robots-source-absent`, plus
+Assertion types: `colour-absent`, `source-absent`, `text-absent`,
+`text-present`, `url-status`, `external-url-ok`, `price-accuracy`,
+`robots-not-blocking-all`, `robots-source-absent`, plus
 delegating types that reuse an existing check (`no-console-errors`,
 `no-mobile-overflow`, `no-broken-links`, `unique-titles`,
 `unique-meta-descriptions`, `no-missing-alt`, `no-orphans`,
@@ -131,41 +137,68 @@ delegating types that reuse an existing check (`no-console-errors`,
 `self-canonical`, `no-internal-redirect-links`, `no-generic-only-booking`,
 `no-sitemap-noindex-conflict`, `sitemap-reachable`, `no-mixed-content`).
 
-## Configuration that still needs a human decision
+## Configuration status
 
-`emjay-qa.config.mjs` marks these **CONFIRM-REQUIRED**. Each one currently
-reports a WARNING rather than passing, so an unfilled config cannot produce a
-false GREEN.
+### Confirmed 2026-08
 
-1. **`brand.colours.approved`** — the approved Emjay palette is empty. Until it
-   is filled, the suite only enforces the *banned* list (`#2EA3F2` and friends)
-   and reports every other colour it finds as an inventory. Fill the palette,
-   then set `brand.colours.mode: 'allowlist'` to enforce it.
-2. **`brand.fonts.approved`** — same pattern for typefaces.
-3. **`content.booking.serviceIntents[].expectedBookingPattern`** — the Square
-   deep-link per service. Without these the suite can flag "generic-only" but
-   cannot assert the correct destination.
-4. **`content.retiredUrls`** — seeded from the documented retired offers only.
-   Extend it from the pre-remediation crawl and Search Console's Pages report.
-5. **`content.business`** — phone, email, street address and postcode are null.
-   They are needed to verify NAP consistency against structured data.
+**Colour palette — enforced.** `brand.colours.mode` is `allowlist`. Approved:
+`#609E9F` teal mid, `#5F9DA0` teal dark, `#87B5B6` teal light, `#DBE8E9` teal
+pale, `#B1CFCF` teal soft, plus the accessibility variants `#426E70` (text on
+pale) and `#457F81` (text on white). Retired and banned at FAIL: `#2F6569`,
+`#5A9A94`, `#2EA3F2`, `#D63637`. Anything else off-palette reports at
+`brand.colours.unapprovedSeverity` (currently `WARN`) — raise to `FAIL` once
+colour remediation is signed off.
 
-## Two source conflicts worth resolving before GREEN
+Two notes on the palette itself, surfaced because they affect what the suite can
+tell you:
 
-Both were found while grounding this config in the Emjay skill files. Neither is
-a site defect on its own, but both change what the suite should assert:
+- `#609E9F` and `#5F9DA0` are only **deltaE 1.2** apart — effectively the same
+  colour to the eye. `tolerance` is set to `1.0` so they stay distinguishable,
+  but they are functionally interchangeable in use.
+- `#32373C` is listed as approved because the brief names it as the dark panel
+  that `#87B5B6` text sits on. If it is not in fact an approved surface, remove
+  it from `brand.colours.approved`.
 
-1. **Cleveland.** `emjay-audience` and `emjay-ceo` state Cleveland closes end of
-   June 2026. `emjay-brand-voice` still lists Cleveland as an active location
-   with its own pricing. The suite currently treats a Cleveland reference as a
-   **WARNING** (`EMJ-006`, registry status `unconfirmed`). Once confirmed
-   closed, promote it to `FAIL`.
-2. **Session pricing.** `emjay-audience` lists I Am At My Limit at
-   $250 / $375 / $499. `emjay-brand-voice` lists $180 / $270 / $360, marked
-   "verified June 2026, Square is master". The suite does **not** assert prices,
-   because asserting the wrong number is worse than not asserting. Once the
-   correct figures are confirmed, add them as `text-absent` entries for the
-   superseded prices.
+Greys are inventoried as INFO rather than flagged, because greyscale is not a
+brand decision — except where a grey sits within `nearBrandDeltaE` of an
+approved colour, which makes it a near-miss of the palette rather than a
+neutral. Set `neutralChromaThreshold: 0` to enforce the allowlist across greys.
+
+**Typefaces — enforced, but migration PARKED.** Approved: Poppins (headings),
+Montserrat (body), Playfair Display (accent), Playlist Script (signature),
+Arial/Helvetica (fallback). The live site has not been migrated, so
+`brand.fonts.unapprovedSeverity` is `'WARN'` — parked work cannot block the
+defect register from reaching GREEN. **When the migration is authorised, change
+that one value to `'FAIL'`.** Nothing else needs to change; a test asserts the
+flip works.
+
+**Cleveland — ACTIVE.** Emjay operates in person at Cleveland QLD and online
+Australia-wide. Sources stating a June 2026 closure are obsolete. Cleveland is
+in `business.activeLocations`, and `EMJ-006` was **reversed**: it now asserts
+Cleveland is *present* on the site, since its disappearance is the regression to
+guard against.
+
+**Pricing — Square is the source of truth.** Current: 60 min in person $180,
+60 min online $140 (promotional until 31 Aug 2026, then $180), 90 min $270,
+2 hr $360. The `pricing` check asserts **absence**, never presence: superseded
+prices ($250 / $375 / $499) must not appear, and the $140 promotional price
+becomes a FAIL automatically the day after it expires. No config edit is needed
+on the expiry date.
+
+### Still requiring configuration
+
+1. **Square booking deep-links** — `square-service-map.json`. Every service
+   except the Payhip membership has `expectedBookingPattern: null`, so the suite
+   can flag a generic-only CTA but cannot assert the correct destination. Paste
+   each service's deep-link fragment from the website remediation handover. This
+   is data, not code: no test or source changes are needed.
+2. **`content.retiredUrls`** — seeded from the documented retired offers only.
+   Extend from the pre-remediation crawl and Search Console's Pages report.
+3. **`content.business`** — phone, email, street address and postcode are still
+   null. Needed to verify NAP consistency against structured data.
+
+Each of these reports a WARNING rather than passing, so an unfilled config
+cannot produce a false GREEN.
 
 ## Continuous use
 
@@ -180,21 +213,29 @@ GREEN means all four of these, in the same run:
 1. `npm run qa` exits `0` with **zero FAIL** findings.
 2. Every entry in `known-defects.json` reports **PASS**. Any `NOT VERIFIED`
    blocks GREEN — it means the assertion could not run, not that it passed.
-3. The five CONFIRM-REQUIRED config items above are filled, with
-   `brand.colours.mode` and `brand.fonts.mode` set to `allowlist`. Until then
-   the palette and typeface checks are advisory only.
+3. The three outstanding config items above are filled — in particular the
+   Square booking deep-links, without which `booking-intent` cannot assert a
+   correct destination.
 4. Remaining WARNINGs are individually reviewed and consciously accepted, with
    the accepted ones recorded. Unreviewed warnings are not "green".
 
-Once GREEN is reached, switch CI to `--fail-on warn` so the standard ratchets
-rather than drifting back.
+Font remediation is deliberately **out of scope for this GREEN**. Unapproved
+typefaces report as WARNING by design, and are expected to still be present.
+
+Once GREEN is reached: switch CI to `--fail-on warn`, raise
+`brand.colours.unapprovedSeverity` to `FAIL`, and authorise the font migration
+by raising `brand.fonts.unapprovedSeverity` to `FAIL`. Each is a one-value
+change.
 
 ## How the suite is verified
 
 The suite ships with a deliberately defective fixture site
 (`tests/fixture-site.mjs`) that seeds one instance of every defect class it
-claims to catch. 80 self-tests assert that each check actually fires — a check
-that silently found nothing would fail its own test.
+claims to catch. 115 self-tests assert that each check actually fires — a check
+that silently found nothing would fail its own test. `tests/config.test.mjs`
+additionally asserts the confirmed configuration decisions themselves, including
+that the stated accessibility variants really do meet AA in their stated
+contexts, so a later edit cannot quietly undo them.
 
 ```bash
 npm run selftest

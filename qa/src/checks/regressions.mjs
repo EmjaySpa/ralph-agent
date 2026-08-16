@@ -152,6 +152,32 @@ async function evaluate(defect, ctx) {
         return { status: 'clear' };
       }
 
+      case 'text-present': {
+        // Inverse of text-absent: something that must appear somewhere on the
+        // site. Used for facts whose disappearance is the regression.
+        const re = new RegExp(a.pattern, a.flags || '');
+        for (const page of site.htmlPages()) {
+          if (re.test(page.dom.text)) return { status: 'clear' };
+        }
+        return {
+          status: 'regressed',
+          url: ctx.cfg.site.baseUrl,
+          detail: `No page on the site matches /${a.pattern}/${a.flags || ''}`,
+        };
+      }
+
+      case 'price-accuracy': {
+        const result = (priorResults || []).find((r) => r.id === 'pricing');
+        if (!result) return { status: 'unknown', detail: 'The pricing check did not run.' };
+        const hits = result.findings.filter(
+          (f) => rank(f.severity) >= rank('WARN') && (!a.defectId || f.defectId === a.defectId),
+        );
+        if (hits.length) {
+          return { status: 'regressed', url: hits[0].url, detail: `${hits.length} finding(s), e.g. ${hits[0].title}` };
+        }
+        return { status: 'clear' };
+      }
+
       case 'url-status': {
         const url = new URL(defect.url || '/', ctx.cfg.site.baseUrl).toString();
         const res = await http.fetchWithChain(url, { wantBody: false });

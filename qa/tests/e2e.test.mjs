@@ -119,11 +119,67 @@ describe('structured data', () => {
 });
 
 describe('content hygiene', () => {
-  test('detects the Cleveland reference', () => assert.ok(has('legacy-references', /Cleveland/)));
+  test('does NOT flag Cleveland, which is an active location', () => {
+    assert.equal(has('legacy-references', /Cleveland/), false);
+  });
   test('detects the retired Midweek Reset offer', () => assert.ok(has('legacy-references', /Midweek Reset/)));
   test('detects the gift certificates reference', () => assert.ok(has('legacy-references', /gift certificate/i)));
   test('detects lorem ipsum placeholder copy', () => assert.ok(has('placeholder-content', /Lorem ipsum/i)));
   test('detects the generic-only booking link on a service page', () => assert.ok(has('booking-intent', /generic booking/i)));
+});
+
+describe('pricing', () => {
+  test('detects the superseded $250 price in live copy', () => {
+    assert.ok(has('pricing', /Superseded price \$250/));
+  });
+
+  test('reports the live promotional price without failing it before expiry', async () => {
+    const check = allChecks().find((c) => c.id === 'pricing');
+    const before = await check.run({ site, cfg, now: new Date('2026-08-16T00:00:00Z') });
+    const promo = before.find((f) => f.defectId === 'PROMO-ONLINE-60');
+    assert.ok(promo, 'the promotional price is reported');
+    assert.ok(['INFO', 'WARN'].includes(promo.severity), `expected INFO/WARN, got ${promo.severity}`);
+    assert.match(promo.title, /expires in \d+ day/);
+  });
+
+  test('fails the promotional price once the expiry date has passed', async () => {
+    const check = allChecks().find((c) => c.id === 'pricing');
+    const after = await check.run({ site, cfg, now: new Date('2026-09-01T00:00:00Z') });
+    const promo = after.find((f) => f.defectId === 'PROMO-ONLINE-60');
+    assert.ok(promo, 'the expired price is reported');
+    assert.equal(promo.severity, 'FAIL');
+    assert.match(promo.title, /Expired promotional price/);
+  });
+
+  test('the last valid day is still inside the promotion', async () => {
+    const check = allChecks().find((c) => c.id === 'pricing');
+    const onExpiry = await check.run({ site, cfg, now: new Date('2026-08-31T06:00:00Z') });
+    const promo = onExpiry.find((f) => f.defectId === 'PROMO-ONLINE-60');
+    assert.notEqual(promo.severity, 'FAIL', '31 August is the final valid day, not an expiry');
+  });
+
+  test('does not match a price embedded in a larger number', async () => {
+    const check = allChecks().find((c) => c.id === 'pricing');
+    const fake = { htmlPages: () => [{ finalUrl: 'https://e.com/', dom: { text: 'Packages from $1,250 and $2500 total.' } }] };
+    const out = await check.run({ site: fake, cfg, now: new Date('2026-08-16T00:00:00Z') });
+    assert.equal(out.filter((f) => /Superseded price \$250/.test(f.title)).length, 0);
+  });
+});
+
+describe('active locations', () => {
+  test('Cleveland is treated as active, so its absence would be the defect', () => {
+    const byDefect = new Map(report.regressions.map((r) => [r.id, r]));
+    assert.equal(byDefect.get('EMJ-006')?.result, 'PASS', 'fixture mentions Cleveland, so the presence assertion passes');
+  });
+
+  test('an active location missing from the site is reported', async () => {
+    const check = allChecks().find((c) => c.id === 'legacy-references');
+    const fake = { htmlPages: () => [{ finalUrl: 'https://e.com/', dom: { text: 'Nothing about locations here.' } }] };
+    const out = await check.run({ site: fake, cfg });
+    for (const loc of cfg.content.business.activeLocations) {
+      assert.ok(out.some((f) => f.title.includes(loc)), `${loc} reported as missing`);
+    }
+  });
 });
 
 describe('colours in source', () => {

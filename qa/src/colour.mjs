@@ -110,6 +110,16 @@ export function rgbToLab({ r, g, b }) {
   return { L: 116 * y - 16, a: 500 * (x - y), b: 200 * (y - z) };
 }
 
+/**
+ * Lab chroma — how far a colour sits from the neutral grey axis.
+ * Near zero for greys, blacks and off-whites; high for saturated brand colours.
+ */
+export function chroma(c) {
+  if (!c) return 0;
+  const lab = rgbToLab(c);
+  return Math.sqrt(lab.a ** 2 + lab.b ** 2);
+}
+
 export function deltaE(c1, c2) {
   if (!c1 || !c2) return Infinity;
   const a = rgbToLab(c1), b = rgbToLab(c2);

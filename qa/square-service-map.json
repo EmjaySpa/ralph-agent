@@ -1,0 +1,75 @@
+{
+  "_readme": [
+    "Square service mappings, used ONLY as QA assertions. This file never writes to Square or WordPress.",
+    "",
+    "One entry per bookable service. The suite checks that a page matching `pathPattern`",
+    "links to a booking URL matching `expectedBookingPattern`, rather than only to a generic",
+    "'book anything' link.",
+    "",
+    "TO CONFIGURE: paste each service's Square booking deep-link fragment into",
+    "`expectedBookingPattern`. It is a regular expression source string (not a full URL), so a",
+    "distinctive fragment is enough — e.g. \"serviceId=ABC123\" or \"/skin-therapy\". Backslashes",
+    "must be escaped for JSON: write \\\\d, not \\d.",
+    "",
+    "While `expectedBookingPattern` is null the service reports WARNING (unconfigured) and can",
+    "never contribute a PASS. Editing this file requires no code or test changes.",
+    "",
+    "Source of truth for these values: the current website remediation handover."
+  ],
+  "services": [
+    {
+      "id": "limit-60-inperson",
+      "label": "I Am At My Limit — 60 min in person",
+      "pathPattern": "i-am-at-my-limit|at-my-limit|limit",
+      "expectedBookingPattern": null
+    },
+    {
+      "id": "limit-60-online",
+      "label": "I Am At My Limit — 60 min online",
+      "pathPattern": "i-am-at-my-limit|at-my-limit|limit",
+      "expectedBookingPattern": null
+    },
+    {
+      "id": "limit-90",
+      "label": "I Am At My Limit — 90 min",
+      "pathPattern": "i-am-at-my-limit|at-my-limit|limit",
+      "expectedBookingPattern": null
+    },
+    {
+      "id": "limit-120",
+      "label": "I Am At My Limit — 2 hours",
+      "pathPattern": "i-am-at-my-limit|at-my-limit|limit",
+      "expectedBookingPattern": null
+    },
+    {
+      "id": "recalibration",
+      "label": "6-Week Midlife Nervous System Recalibration",
+      "pathPattern": "recalibration|6-week|six-week",
+      "expectedBookingPattern": null
+    },
+    {
+      "id": "skin",
+      "label": "Skin therapy",
+      "pathPattern": "skin|facial|dermalux|led",
+      "expectedBookingPattern": null
+    },
+    {
+      "id": "membership",
+      "label": "Nervous System Reset membership",
+      "pathPattern": "membership|nervous-system-reset",
+      "expectedBookingPattern": "payhip\\.com/emjaywellness"
+    },
+    {
+      "id": "circle",
+      "label": "Women's Circles",
+      "pathPattern": "circle",
+      "expectedBookingPattern": null
+    },
+    {
+      "id": "ndis",
+      "label": "NDIS support work",
+      "pathPattern": "ndis|support-work",
+      "expectedBookingPattern": null
+    }
+  ]
+}

@@ -13,6 +13,12 @@
  * unfilled config can never contribute to a false GREEN.
  */
 
+import { createRequire } from 'node:module';
+
+// Square service mappings live in data, not code, so they can be updated
+// without touching the suite or its tests.
+const serviceMap = createRequire(import.meta.url)('./square-service-map.json');
+
 export default {
   site: {
     baseUrl: 'https://emjaywellness.com.au',
@@ -111,20 +117,48 @@ export default {
        * mode: 'blocklist'  -> only `banned` colours are enforced; every other
        *                       colour found is reported as INFO for review.
        *       'allowlist'  -> anything outside `approved` (beyond tolerance)
-       *                       is a WARNING. Switch to this once the palette
-       *                       below is confirmed by Bel/design.
+       *                       is reported at `unapprovedSeverity`.
+       *
+       * CONFIRMED 2026-08: palette signed off, allowlist enforcement is on.
        */
-      mode: 'blocklist',
+      mode: 'allowlist',
 
-      // CONFIRM-REQUIRED: the approved Emjay palette. Leave empty until
-      // confirmed. While empty, `mode: 'allowlist'` is refused and the check
-      // reports WARNING rather than silently passing.
-      approved: [],
+      // Severity applied to a colour that is simply not on the approved list.
+      // Colours on the `banned` list keep their own, higher severity.
+      // Raise to 'FAIL' once colour remediation is complete and signed off.
+      unapprovedSeverity: 'WARN',
 
-      // Known-unapproved colours. #2EA3F2 is the Divi theme default blue and
-      // is the flagship rogue-colour defect for this site.
+      /**
+       * The approved Emjay palette (confirmed 2026-08).
+       * `role` is reported back in findings so a near-miss names the colour it
+       * should have been.
+       */
+      approved: [
+        { hex: '#609E9F', role: 'teal mid' },
+        { hex: '#5F9DA0', role: 'teal dark' },
+        { hex: '#87B5B6', role: 'teal light / text on the dark #32373C panel' },
+        { hex: '#DBE8E9', role: 'teal pale' },
+        { hex: '#B1CFCF', role: 'teal soft' },
+        // Accessibility variants, approved for the stated contexts only. The
+        // contrast check enforces the actual ratios independently.
+        { hex: '#426E70', role: 'accessible text on pale backgrounds only' },
+        { hex: '#457F81', role: 'accessible text on white' },
+        // Surface colour named in the palette brief as the dark panel that
+        // #87B5B6 text sits on. Listed so the panel itself is not reported as
+        // an unapproved colour. Remove if it is not in fact an approved surface.
+        { hex: '#32373C', role: 'dark panel surface' },
+      ],
+
+      /**
+       * Colours that must never reappear.
+       * The first four are the confirmed retired/unapproved set for this brand;
+       * the rest are theme defaults that indicate an unstyled leak.
+       */
       banned: [
-        { hex: '#2EA3F2', label: 'Divi default blue', severity: 'FAIL' },
+        { hex: '#2EA3F2', label: 'Divi default blue (retired)', severity: 'FAIL' },
+        { hex: '#2F6569', label: 'Retired teal (superseded)', severity: 'FAIL' },
+        { hex: '#5A9A94', label: 'Retired teal (superseded)', severity: 'FAIL' },
+        { hex: '#D63637', label: 'Retired red (unapproved)', severity: 'FAIL' },
         { hex: '#7EBEC5', label: 'Divi default secondary', severity: 'WARN' },
         { hex: '#0C71C3', label: 'Divi default link blue', severity: 'WARN' },
         { hex: '#00A0D2', label: 'WordPress admin blue', severity: 'WARN' },
@@ -133,20 +167,73 @@ export default {
       ],
 
       // Max CIE76 deltaE distance at which a rendered colour is considered
-      // "the same as" a listed colour. 0 = exact hex match only.
-      tolerance: 3,
+      // "the same as" a listed colour. Computed styles are exact declared
+      // values, not sampled pixels, so this can be tight.
+      // NOTE: #609E9F ("teal mid") and #5F9DA0 ("teal dark") are only deltaE
+      // 1.2 apart — effectively the same colour to the eye. This is kept below
+      // that gap so the two are not silently interchangeable.
+      tolerance: 1.0,
 
-      // Colours always ignored (neutrals, transparent, pure black/white).
+      // deltaE at which a banned colour is treated as "close enough to count".
+      // Wider than `tolerance` so a nudged-by-one-digit retired colour is still
+      // caught, but still far short of the nearest approved teal.
+      bannedTolerance: 4,
+
+      /**
+       * Greyscale is not a brand decision. Any colour whose Lab chroma is below
+       * this threshold (neutral greys, blacks, off-whites, shadow rgba) is
+       * reported as INFO rather than as an unapproved brand colour, so the
+       * allowlist signal stays readable. Banned colours are never downgraded.
+       * Set to 0 to enforce the allowlist across greys too.
+       */
+      neutralChromaThreshold: 8,
+
+      /**
+       * A low-chroma colour that sits close to an approved brand colour is a
+       * near-miss of the palette, not a neutral. Anything within this deltaE of
+       * an approved colour is always reported at `unapprovedSeverity`, however
+       * grey it is. Without this, an off-by-a-shade version of the pale teal
+       * #DBE8E9 (chroma 4.6) would be filed away as a harmless grey.
+       */
+      nearBrandDeltaE: 12,
+
+      // Colours always ignored entirely.
       ignore: ['transparent', 'rgba(0, 0, 0, 0)', '#000000', '#FFFFFF'],
     },
 
     fonts: {
-      mode: 'blocklist',
+      // CONFIRMED 2026-08: typefaces signed off.
+      mode: 'allowlist',
 
-      // CONFIRM-REQUIRED: approved families (lowercase, no quotes).
-      approved: [],
+      /**
+       * IMPORTANT — font remediation is deliberately PARKED.
+       * The live site has not yet been migrated to these families. Until that
+       * migration is authorised, an unapproved font is a WARNING, not a FAIL,
+       * so parked work cannot block the defect register from reaching GREEN.
+       *
+       * When the migration is authorised: change this to 'FAIL'. Nothing else
+       * needs to change.
+       */
+      unapprovedSeverity: 'WARN',
 
-      // Families that indicate an unstyled/theme-default leak.
+      // Approved families (lowercase, no quotes).
+      approved: [
+        'poppins',          // headings
+        'montserrat',       // body
+        'playfair display', // accent
+        'playlist script',  // signature
+        'arial',            // fallback
+        'helvetica',        // fallback
+        'helvetica neue',   // fallback (common alias)
+      ],
+
+      /**
+       * Families that indicate an unstyled/theme-default leak.
+       * These stay at WARN while the font migration is parked, so they read the
+       * same as any other unapproved family rather than standing out as a
+       * blocker. Comic Sans and Papyrus remain FAIL: they are never the result
+       * of an unfinished migration.
+       */
       banned: [
         { family: 'times new roman', severity: 'WARN', label: 'Browser default serif (unstyled text)' },
         { family: 'comic sans ms', severity: 'FAIL', label: 'Comic Sans' },
@@ -155,6 +242,10 @@ export default {
 
       // Generic stacks that are fine to see as fallbacks.
       ignore: ['inherit', 'initial', 'sans-serif', 'serif', 'monospace', 'system-ui', '-apple-system'],
+
+      // Distinct-family ceiling before the count itself is reported.
+      // Raised while both the old and new typefaces coexist during migration.
+      maxDistinctFamilies: 6,
     },
   },
 
@@ -172,7 +263,7 @@ export default {
      */
     retiredUrls: [
       { path: '/midweek-reset/', expect: 'absent-from-site', note: 'Retired offer (emjay-offers)' },
-      { path: '/gift-certificates/', expect: 'absent-from-site', note: 'Removed during Cleveland-to-Tinana transition' },
+      { path: '/gift-certificates/', expect: 'absent-from-site', note: 'Removed offer' },
       { path: '/gift-vouchers/', expect: 'absent-from-site', note: 'Removed offer variant' },
       { path: '/90-minute-session/', expect: 'absent-from-site', note: 'Retired, replaced by I Am At My Limit' },
     ],
@@ -181,20 +272,12 @@ export default {
      * Old business / location / offer references that must not appear in
      * live page copy.
      *
-     * NOTE ON SEVERITY: the Emjay skill sources disagree about Cleveland.
-     * emjay-audience and emjay-ceo state Cleveland closes end of June 2026
-     * (i.e. closed as of this suite's authoring); emjay-brand-voice still
-     * lists Cleveland as active. Until a human resolves that, Cleveland is a
-     * WARNING, not a FAIL. Promote to FAIL once confirmed closed.
+     * CLEVELAND: confirmed 2026-08 as an ACTIVE location. Emjay operates in
+     * person at Cleveland QLD and online Australia-wide. Any source stating
+     * Cleveland closed in June 2026 is obsolete. Cleveland is therefore listed
+     * under business.activeLocations below, and is NOT a stale reference.
      */
     legacyReferences: [
-      {
-        id: 'LOC-CLEVELAND',
-        pattern: /\bCleveland\b/i,
-        severity: 'WARN',
-        label: 'Cleveland QLD location reference',
-        note: 'Cleveland was scheduled to close end of June 2026. Sources conflict — confirm with Bel, then promote to FAIL.',
-      },
       {
         id: 'OFFER-MIDWEEK-RESET',
         pattern: /\bMidweek\s+Reset\b/i,
@@ -221,11 +304,9 @@ export default {
      * "book anything" link, when a service-specific booking URL exists, is a
      * conversion defect.
      *
-     * genericBookingPatterns: links that book "something, unspecified".
-     * serviceIntents: page patterns that should deep-link to a specific
-     * service. `expectedBookingPattern` is CONFIRM-REQUIRED per service; while
-     * null, the check reports the generic link as WARNING with the note that
-     * the specific target is unconfigured.
+     * The per-service mappings live in square-service-map.json so they can be
+     * updated by editing data, with no code or test changes. They are read-only
+     * QA assertions — the suite never writes to Square.
      */
     booking: {
       genericBookingPatterns: [
@@ -235,16 +316,65 @@ export default {
         /\/booking\/?$/i,
         /\/contact\/?$/i,
       ],
-      serviceIntents: [
-        { id: 'skin', match: /skin|facial|dermalux|led/i, label: 'Skin therapy', expectedBookingPattern: null },
-        { id: 'limit', match: /i-am-at-my-limit|limit/i, label: 'I Am At My Limit session', expectedBookingPattern: null },
-        { id: 'recalibration', match: /recalibration|6-week|six-week/i, label: '6-Week Recalibration', expectedBookingPattern: null },
-        { id: 'membership', match: /membership|nervous-system-reset/i, label: 'Nervous System Reset membership', expectedBookingPattern: /payhip\.com\/emjaywellness/i },
-        { id: 'circle', match: /circle/i, label: "Women's Circles", expectedBookingPattern: null },
-        { id: 'ndis', match: /ndis|support-work/i, label: 'NDIS support work', expectedBookingPattern: null },
-      ],
+      serviceIntents: serviceMap.services.map((s) => ({
+        id: s.id,
+        label: s.label,
+        match: new RegExp(s.pathPattern, 'i'),
+        expectedBookingPattern: s.expectedBookingPattern ? new RegExp(s.expectedBookingPattern, 'i') : null,
+      })),
       // Domains that legitimately terminate a booking journey.
       allowedBookingHosts: ['squareup.com', 'square.site', 'payhip.com', 'emjaywellness.com.au'],
+    },
+
+    /**
+     * Pricing assertions. Square is the source of truth; the suite only ever
+     * reads the website and compares it against the figures declared here.
+     *
+     * It deliberately does NOT assert that a given price must be present —
+     * that would break every time a page is restructured. It asserts two
+     * things that are unambiguous defects:
+     *   1. a superseded price appearing anywhere in live copy
+     *   2. a time-bound promotional price still showing after it expires
+     */
+    pricing: {
+      // Current, confirmed figures. Recorded for the report, not asserted as
+      // required text.
+      current: [
+        { label: "I Am At My Limit — 60 min in person", price: '$180' },
+        { label: "I Am At My Limit — 60 min online (promotional)", price: '$140' },
+        { label: "I Am At My Limit — 60 min online (standard)", price: '$180' },
+        { label: "I Am At My Limit — 90 min", price: '$270' },
+        { label: "I Am At My Limit — 2 hours", price: '$360' },
+      ],
+
+      /**
+       * Prices that must not appear in live copy. Matched with a word boundary
+       * and optional .00, so "$250" does not match inside "$1,250".
+       */
+      superseded: [
+        { price: '250', severity: 'FAIL', note: 'Superseded I Am At My Limit 60 min price' },
+        { price: '375', severity: 'FAIL', note: 'Superseded I Am At My Limit 90 min price' },
+        { price: '499', severity: 'FAIL', note: 'Superseded I Am At My Limit 2 hr price' },
+      ],
+
+      /**
+       * Time-bound offers. Before `expiresAt` the price is expected and nothing
+       * is reported. On or after it, any remaining reference is a defect at
+       * `severityAfterExpiry`. Dates are inclusive of the last valid day and
+       * evaluated in Australia/Brisbane.
+       */
+      timeBound: [
+        {
+          id: 'PROMO-ONLINE-60',
+          label: 'I Am At My Limit — 60 min online promotional price',
+          price: '140',
+          expiresAt: '2026-08-31',
+          severityAfterExpiry: 'FAIL',
+          note: 'Promotional until 31 August 2026; reverts to $180. After expiry, remove or update the price.',
+        },
+      ],
+
+      timezone: 'Australia/Brisbane',
     },
 
     /**
@@ -253,7 +383,9 @@ export default {
      */
     business: {
       name: 'Emjay Wellness',
-      activeLocations: ['Tinana', 'Maryborough'],
+      // Confirmed 2026-08: Cleveland is active, alongside Tinana/Maryborough
+      // and online Australia-wide.
+      activeLocations: ['Cleveland', 'Tinana', 'Maryborough'],
       phone: null,            // CONFIRM-REQUIRED
       email: null,            // CONFIRM-REQUIRED
       streetAddress: null,    // CONFIRM-REQUIRED
