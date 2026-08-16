@@ -1,0 +1,310 @@
+# Emjay Wellness QA configuration
+#
+# This file is the ONLY place site-specific expectations live. The checks are
+# generic; everything Emjay-specific is data below. Update this file when the
+# brand, offer suite, or locations change. Never edit check code to make a
+# result go green.
+#
+# Anything marked CONFIRM is a placeholder that a human must verify before the
+# related check can move from discovery (WARNING) to enforcement (FAIL).
+
+site:
+  base_url: "https://emjaywellness.com.au"
+  # Hostnames treated as "this site" (www and apex both count as internal).
+  internal_hosts:
+    - "emjaywellness.com.au"
+    - "www.emjaywellness.com.au"
+  # Hosts that are ours but off-domain: linked, checked, never crawled deeply.
+  owned_external_hosts:
+    - "payhip.com"
+    - "squareup.com"
+    - "square.site"
+    - "app.squareup.com"
+
+crawl:
+  max_pages: 300
+  max_depth: 6
+  # Seconds between requests to the same host. Be polite: this runs against a
+  # live production site owned by a sole practitioner.
+  delay_seconds: 0.7
+  timeout_seconds: 25
+  user_agent: "EmjayQA/1.0 (+automated read-only QA; contact: emjaywellness.com.au)"
+  obey_robots: true
+  verify_tls: true
+  # Never crawled. Feeds, admin, and anything that could mutate state.
+  exclude_url_patterns:
+    - "/wp-admin"
+    - "/wp-login"
+    - "/wp-json"
+    - "/feed/?$"
+    - "/xmlrpc.php"
+    - "\\?add-to-cart="
+    - "\\?remove_item="
+    - "/cart"
+    - "/checkout"
+    - "\\?replytocom="
+    - "/comment-page-"
+    - "\\.(zip|pdf|docx?|xlsx?|mp4|mp3|wav)$"
+  # Query params stripped before URLs are compared/deduplicated.
+  strip_query_params:
+    - "utm_source"
+    - "utm_medium"
+    - "utm_campaign"
+    - "utm_term"
+    - "utm_content"
+    - "fbclid"
+    - "gclid"
+    - "ref"
+
+sitemaps:
+  # Checked in order; all that exist are parsed.
+  candidates:
+    - "/sitemap_index.xml"
+    - "/sitemap.xml"
+    - "/wp-sitemap.xml"
+    - "/sitemap-index.xml"
+
+thresholds:
+  title_min_length: 25
+  title_max_length: 62
+  meta_description_min_length: 70
+  meta_description_max_length: 160
+  # Redirect hops before a chain is flagged. 1 hop is normal, 2+ is a chain.
+  max_redirect_hops: 1
+  thin_content_words: 250
+  # Jaccard similarity over 5-word shingles at which two pages are duplicates.
+  duplicate_similarity: 0.90
+  min_internal_links_out: 3
+  min_internal_links_in: 1
+  max_click_depth: 4
+  slow_response_ms: 1500
+  very_slow_response_ms: 3000
+  max_page_weight_kb: 3000
+  max_image_kb: 400
+  max_requests: 90
+  # WCAG 2.1 AA
+  contrast_normal_text: 4.5
+  contrast_large_text: 3.0
+  # Viewport used for the mobile overflow check.
+  mobile_viewport: [390, 844]
+  mobile_overflow_tolerance_px: 2
+
+brand:
+  # Colours that must never appear. #2EA3F2 is the Divi theme default blue and
+  # is the flagship rogue-colour defect for this site.
+  banned_colours:
+    - hex: "#2EA3F2"
+      label: "Divi default blue"
+    - hex: "#0C71C3"
+      label: "Divi secondary blue"
+    - hex: "#7EBEC5"
+      label: "Divi default teal"
+    - hex: "#0073AA"
+      label: "WordPress admin blue"
+    - hex: "#1E73BE"
+      label: "Divi/WP legacy link blue"
+    - hex: "#E02B20"
+      label: "Divi default red"
+  # CONFIRM: the approved palette has not been supplied. While this list is
+  # empty every non-banned colour is reported as discovery (WARNING at most),
+  # never FAIL. Populate it and set enforce_palette: true to make unapproved
+  # colours a hard failure.
+  approved_colours: []
+  enforce_palette: false
+  # Near-miss detection: colours within this CIE-ish distance of a banned
+  # colour are reported (catches #2EA3F3, rgb(46,163,241) style drift).
+  colour_near_miss_distance: 12
+
+  # Font families that must never be rendered or declared.
+  banned_fonts:
+    - "Open Sans"      # Divi default body font
+    - "Comic Sans MS"
+    - "Times New Roman"
+    - "Papyrus"
+  # CONFIRM: the approved font stack has not been supplied. Same discovery
+  # behaviour as colours.
+  approved_fonts: []
+  enforce_fonts: false
+  # Generic families that are acceptable anywhere as fallbacks.
+  allowed_generic_fonts:
+    - "sans-serif"
+    - "serif"
+    - "monospace"
+    - "system-ui"
+    - "inherit"
+    - "-apple-system"
+    - "BlinkMacSystemFont"
+    - "Segoe UI"
+    - "Helvetica"
+    - "Helvetica Neue"
+    - "Arial"
+    - "ETmodules"        # Divi icon font, not a text face
+    - "FontAwesome"
+    - "icomoon"
+
+business:
+  correct_name: "Emjay Wellness"
+  # Retired names/terms. Any occurrence in visible text, titles, meta, schema
+  # or alt text is a failure.
+  retired_terms:
+    - term: "Emjay Spa & Wellness"
+      reason: "Retired business name"
+    - term: "Emjay Spa and Wellness"
+      reason: "Retired business name"
+    - term: "Emjay Spa"
+      reason: "Retired business name"
+      # Avoid matching "Emjay Spa" inside "Emjay Spa & Wellness" twice.
+      subsumed_by: "Emjay Spa & Wellness"
+    - term: "gift certificate"
+      reason: "Gift certificates were removed from the offer suite"
+    - term: "gift certificates"
+      reason: "Gift certificates were removed from the offer suite"
+    - term: "gift voucher"
+      reason: "Gift certificates were removed from the offer suite"
+    - term: "Midweek Reset"
+      reason: "Retired offer"
+    - term: "standard 90-minute session"
+      reason: "Retired offer, replaced by I Am At My Limit"
+    - term: "standard 90 minute session"
+      reason: "Retired offer, replaced by I Am At My Limit"
+
+  # Location strings are WATCHED, not judged. The two internal sources of truth
+  # disagree about which of Cleveland and Tinana is current, so this check
+  # reports where each location appears and leaves the call to a human.
+  # Move a term into retired_locations once Bel confirms it, and it becomes a
+  # hard failure.
+  watched_locations:
+    - "Cleveland"
+    - "Tinana"
+    - "Maryborough"
+    - "Brisbane"
+    - "Hervey Bay"
+  retired_locations: []   # CONFIRM with Bel before populating
+
+  # Contact details that must be consistent wherever they appear (schema, text,
+  # footer). CONFIRM: populate to enable NAP consistency enforcement.
+  canonical_phone: ""
+  canonical_email: ""
+  canonical_street_address: ""
+
+offers:
+  # Live offers. Used to identify "specific intent" pages for the booking-link
+  # check. Names only, no pricing: this suite does not assert prices.
+  current:
+    - "I Am At My Limit"
+    - "6-Week Midlife Nervous System Recalibration"
+    - "Nervous System Reset"
+    - "Skin Pick Me Up"
+    - "Skin Pick-Me-Up"
+    - "Calming Skin Reset"
+    - "Deep Skin Reset"
+    - "Nervous System Facial Therapy"
+    - "Therapy for Stress & Skin"
+    - "Skin Repair & Renewal"
+    - "Bespoke Skin Therapy"
+    - "Teen Calm"
+    - "Body Bliss"
+    - "Whole Skin, Body & Soul Reset"
+    - "Pellowah"
+    - "Guided Meditation"
+    - "Start Here Call"
+    - "Big Exhale Retreat"
+    - "Clinical Clarity"
+
+booking:
+  # A link is "generic" if it lands on a booking front door with no service
+  # preselected.
+  generic_link_patterns:
+    - "^https?://(app\\.)?squareup\\.com/appointments/book/[^/]+/?$"
+    - "^https?://[^/]*square\\.site/?$"
+    - "^https?://book\\.[^/]+/?$"
+    - "/book/?$"
+    - "/booking/?$"
+    - "/contact/?$"
+  # A link is "specific" if it targets a service/variation directly.
+  specific_link_patterns:
+    - "squareup\\.com/appointments/book/.+/(services|service)/"
+    - "[?&]serviceVariationId="
+    - "[?&]service="
+  # Pages whose URL or H1 matches one of these are expected to carry a
+  # service-specific booking link.
+  specific_intent_url_patterns:
+    - "/services?/"
+    - "/skin"
+    - "/sessions?/"
+    - "/offers?/"
+    - "/programs?/"
+    - "/book-"
+
+legacy_urls:
+  # Old paths that must keep resolving. expect: "redirect" (301/308 to target),
+  # "gone" (410/404 is acceptable and must NOT be linked internally).
+  # CONFIRM: this list is seeded from known retired offers and the business
+  # rename. Add every URL retired during remediation.
+  - path: "/gift-certificates/"
+    expect: "gone"
+  - path: "/gift-vouchers/"
+    expect: "gone"
+  - path: "/midweek-reset/"
+    expect: "gone"
+  - path: "/emjay-spa-wellness/"
+    expect: "gone"
+
+structured_data:
+  # Types expected somewhere on the site.
+  expected_types_sitewide:
+    - "LocalBusiness"
+  # Required properties per type when the type is present.
+  required_properties:
+    LocalBusiness: ["name", "url", "address"]
+    Organization: ["name", "url"]
+    Service: ["name", "provider"]
+    BreadcrumbList: ["itemListElement"]
+    FAQPage: ["mainEntity"]
+    Article: ["headline", "author", "datePublished"]
+    Product: ["name", "offers"]
+
+accessibility:
+  # Alt text that is present but useless.
+  meaningless_alt_values:
+    - "image"
+    - "img"
+    - "photo"
+    - "picture"
+    - "graphic"
+    - "untitled"
+    - "dsc"
+    - "screenshot"
+  # Link text that gives no context to a screen reader user.
+  vague_link_text:
+    - "click here"
+    - "read more"
+    - "here"
+    - "more"
+    - "link"
+    - "this"
+
+runtime:
+  # Browser-driven checks (console errors, mobile overflow, computed styles,
+  # measured contrast). Disable with --no-browser.
+  enabled: true
+  # Pages to probe in the browser. 0 = every crawled page.
+  max_pages: 40
+  # Console messages matching these are noise from third parties, downgraded to
+  # WARNING instead of FAIL.
+  ignorable_console_patterns:
+    - "favicon"
+    - "Download the React DevTools"
+    - "chrome-extension://"
+    - "Tracking Prevention blocked"
+    - "third-party cookie"
+
+severity_overrides:
+  # check_id: FAIL | WARNING | INFO | OFF
+  # Use this to tune the gate without touching check code.
+  perf.page_weight: WARNING
+  perf.slow_response: WARNING
+  seo.title_length: WARNING
+  seo.meta_description_length: WARNING
+  content.thin_page: WARNING
+  structure.click_depth: WARNING
