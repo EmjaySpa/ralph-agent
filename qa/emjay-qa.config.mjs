@@ -96,6 +96,19 @@ export default {
     contrastNormalText: 4.5,     // WCAG 2.1 AA
     contrastLargeText: 3.0,
     largeTextPx: 24,             // or 18.66px bold
+
+    /**
+     * The font-weight at which WCAG considers text "bold", which is what
+     * decides whether 18.66px–24px text takes the 3:1 large-text threshold or
+     * the 4.5:1 normal threshold.
+     *
+     * WCAG 2.1 says 700. Semibold (600) is NOT bold, so 21px/600 correctly
+     * takes 4.5:1 — this is the single most misread rule in contrast auditing,
+     * because 21px "looks like" large text. Lowering this to 600 will let
+     * genuine AA failures pass. Change it only as a deliberate, recorded
+     * decision.
+     */
+    boldWeightThreshold: 700,
     maxContrastSamplesPerPage: 400,
 
     // --- performance (measured in a throttled-free headless run; these are
@@ -147,6 +160,16 @@ export default {
         // contrast check enforces the actual ratios independently.
         { hex: '#426E70', role: 'accessible text on pale backgrounds only' },
         { hex: '#457F81', role: 'accessible text on white' },
+        /**
+         * Approved button label colour. The approved Emjay button spec is
+         * background #5F9DA0 with color #1c2224, which measures 5.23:1 and
+         * passes AA. Already live on .emjay-btn-primary, .wpw-btn and the
+         * Contact form submit. Listed so those buttons are not reported as
+         * off-palette; it does not alter the palette or the scoped
+         * accessibility variants, which stand exactly as approved.
+         * Source: reconciliation of 16 August 2026.
+         */
+        { hex: '#1C2224', role: 'approved button label colour on #5F9DA0' },
         // Surface colour named in the palette brief as the dark panel that
         // #87B5B6 text sits on. Listed so the panel itself is not reported as
         // an unapproved colour. Remove if it is not in fact an approved surface.
@@ -281,18 +304,42 @@ export default {
      * Cleveland closed in June 2026 is obsolete. Cleveland is therefore listed
      * under business.activeLocations below, and is NOT a stale reference.
      */
+    /**
+     * Legal pages. Forward-looking provisions live here and must be left alone
+     * even when the corresponding product is dormant or unpublished. Rules can
+     * exclude these paths via `excludePaths`.
+     */
+    legalPagePatterns: [
+      /privacy-policy/i,
+      /refund/i,
+      /returns/i,
+      /terms/i,
+      /conditions/i,
+      /disclaimer/i,
+    ],
+
     legacyReferences: [
       {
         id: 'OFFER-MIDWEEK-RESET',
         pattern: /\bMidweek\s+Reset\b/i,
         severity: 'FAIL',
         label: 'Retired offer: Midweek Reset',
+        excludePaths: 'legal',
       },
       {
         id: 'OFFER-GIFT-CERT',
         pattern: /\bgift\s+(certificate|voucher)s?\b/i,
         severity: 'FAIL',
         label: 'Removed offer: gift certificates/vouchers',
+        /**
+         * Legal pages are excluded deliberately. Gift products are drafted and
+         * dormant rather than deleted, and their future is under review, so the
+         * refund and validity provisions on the legal pages must stay. Flagging
+         * them would push someone to strip terms that need to remain.
+         * Confirmed by Belinda, 16 August 2026. See RETREAT-CLAUSES-PRESENT and
+         * GIFT-CLAUSES-PRESENT, which assert those clauses are still there.
+         */
+        excludePaths: 'legal',
       },
       {
         id: 'COPY-EM-DASH-CTA',

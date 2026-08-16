@@ -141,12 +141,23 @@ export function contrastRatio(fg, bg) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/** WCAG 2.1: >=24px, or >=18.66px when bold, counts as large text. */
-export function isLargeText(fontSizePx, fontWeight) {
+/**
+ * WCAG 2.1 large text: at least 18pt (24px), or 14pt (18.66px) **bold**.
+ *
+ * "Bold" is weight 700 or heavier. This is the distinction that catches people
+ * out: 21px at weight 600 (semibold) is NOT large text, so it takes the 4.5:1
+ * threshold, not 3:1. Semibold looks bold and is routinely misread as bold when
+ * only the pixel size is quoted.
+ *
+ * `boldWeight` is configurable for teams that deliberately treat 600 as bold,
+ * but the WCAG-conformant default is 700 and lowering it will let genuine
+ * failures through.
+ */
+export function isLargeText(fontSizePx, fontWeight, boldWeight = 700) {
   const size = parseFloat(fontSizePx);
   const weight = Number(fontWeight) || (String(fontWeight).includes('bold') ? 700 : 400);
   if (!Number.isFinite(size)) return false;
-  return size >= 24 || (size >= 18.66 && weight >= 700);
+  return size >= 24 || (size >= 18.66 && weight >= boldWeight);
 }
 
 /** Every hex/rgb/hsl literal in a blob of CSS or HTML, with its offset. */

@@ -1,5 +1,9 @@
 # Emjay Wellness — automated QA regression suite
 
+> **New here, or picking this up cold? Read [HANDOVER.md](HANDOVER.md).**
+> It explains how to run the suite, read the report and maintain the register
+> with no AI tooling and no prior context.
+
 Independent technical QA for **emjaywellness.com.au**. Built to be re-run after
 each round of remediation, and to be the gate that decides whether the site can
 be declared GREEN.
@@ -144,7 +148,8 @@ delegating types that reuse an existing check (`no-console-errors`,
 **Colour palette — enforced.** `brand.colours.mode` is `allowlist`. Approved:
 `#609E9F` teal mid, `#5F9DA0` teal dark, `#87B5B6` teal light, `#DBE8E9` teal
 pale, `#B1CFCF` teal soft, plus the accessibility variants `#426E70` (text on
-pale) and `#457F81` (text on white). Retired and banned at FAIL: `#2F6569`,
+pale) and `#457F81` (text on white), and the approved button label colour
+`#1C2224` (5.23:1 on `#5F9DA0`). Retired and banned at FAIL: `#2F6569`,
 `#5A9A94`, `#2EA3F2`, `#D63637`. Anything else off-palette reports at
 `brand.colours.unapprovedSeverity` (currently `WARN`) — raise to `FAIL` once
 colour remediation is signed off.
@@ -231,7 +236,7 @@ change.
 
 The suite ships with a deliberately defective fixture site
 (`tests/fixture-site.mjs`) that seeds one instance of every defect class it
-claims to catch. 115 self-tests assert that each check actually fires — a check
+claims to catch. 157 self-tests assert that each check actually fires — a check
 that silently found nothing would fail its own test. `tests/config.test.mjs`
 additionally asserts the confirmed configuration decisions themselves, including
 that the stated accessibility variants really do meet AA in their stated

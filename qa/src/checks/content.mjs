@@ -96,9 +96,23 @@ export const legacyReferences = {
       })];
     }
 
+    const legalPatterns = cfg.content.legalPagePatterns || [];
+    const isLegalPage = (url) => {
+      try {
+        return legalPatterns.some((re) => re.test(new URL(url).pathname));
+      } catch {
+        return false;
+      }
+    };
+
     for (const page of site.htmlPages()) {
       const text = page.dom.text;
       for (const rule of rules) {
+        // Forward-looking legal provisions stay, even when the product they
+        // cover is dormant. Flagging them would push someone to strip terms
+        // that must remain.
+        if (rule.excludePaths === 'legal' && isLegalPage(page.finalUrl)) continue;
+        if (Array.isArray(rule.excludePaths) && rule.excludePaths.some((re) => re.test(page.finalUrl))) continue;
         const re = new RegExp(rule.pattern.source, rule.pattern.flags.includes('g') ? rule.pattern.flags : rule.pattern.flags + 'g');
         const hits = [...text.matchAll(re)];
         if (!hits.length) continue;

@@ -358,7 +358,7 @@ export const colourContrast = {
         const ratio = contrastRatio(fg, bg);
         if (ratio === null) continue;
 
-        const large = isLargeText(sample.fontSize, sample.fontWeight);
+        const large = isLargeText(sample.fontSize, sample.fontWeight, cfg.thresholds.boldWeightThreshold ?? 700);
         const required = large ? contrastLargeText : contrastNormalText;
         if (ratio >= required) continue;
 
@@ -366,11 +366,24 @@ export const colourContrast = {
         if (seen.has(key)) continue;
         seen.add(key);
 
+        // Spell out which WCAG rule was applied and why. Without this, a
+        // reviewer sees "21px" and reasonably assumes large text, when the
+        // weight is what decides it: WCAG bold starts at 700, so 21px/600 is
+        // normal text and takes the 4.5:1 threshold, not 3:1.
+        const weight = Number(sample.fontWeight) || sample.fontWeight;
+        const basis = large
+          ? `large text (${sample.fontSize}px${Number(weight) >= 700 ? ' bold' : ''}), threshold ${contrastLargeText}:1`
+          : `normal text (${sample.fontSize}px, weight ${weight}` +
+            (sample.fontSize >= 18.66 && Number(weight) < 700
+              ? ` — not large: WCAG counts 14pt/18.66px as large only at weight 700+`
+              : '') +
+            `), threshold ${contrastNormalText}:1`;
+
         findings.push(finding({
           severity: ratio < required * 0.75 ? 'FAIL' : 'WARN',
           title: `Contrast ${ratio.toFixed(2)}:1 below AA minimum ${required}:1`,
           url,
-          detail: `${sample.fg} on ${sample.bg} at ${sample.fontSize}px/${sample.fontWeight} — ${sample.selector}\n    "${sample.text}"`,
+          detail: `${sample.fg} on ${sample.bg} — ${basis}\n    ${sample.selector}\n    "${sample.text}"`,
           fix: 'Darken the text or lighten the background until the ratio clears the minimum.',
         }));
       }

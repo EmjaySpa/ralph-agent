@@ -9,7 +9,13 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — named explicitly as a rogue colour",
-      "assert": { "type": "colour-absent", "value": "#2EA3F2", "tolerance": 3 }
+      "openSince": "2026-08-15",
+      "note": "Divi default `a { color:#2ea3f2 }`. Never fixed — open continuously on the defect register and item 5.2 in the handover. Reported as STILL PRESENT, not a regression. Add \"fixedOn\" once a verified fix ships, after which a reappearance is a genuine regression.",
+      "assert": {
+        "type": "colour-absent",
+        "value": "#2EA3F2",
+        "tolerance": 3
+      }
     },
     {
       "id": "EMJ-002",
@@ -18,8 +24,13 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08",
-      "note": "Catches the colour in stylesheets and inline style attributes even where the element is not currently visible.",
-      "assert": { "type": "source-absent", "pattern": "#2ea3f2|rgb\\(\\s*46\\s*,\\s*163\\s*,\\s*242\\s*\\)", "flags": "i" }
+      "openSince": "2026-08-15",
+      "note": "Catches the colour in stylesheets and inline style attributes even where the element is not currently visible. Never fixed — see EMJ-001.",
+      "assert": {
+        "type": "source-absent",
+        "pattern": "#2ea3f2|rgb\\(\\s*46\\s*,\\s*163\\s*,\\s*242\\s*\\)",
+        "flags": "i"
+      }
     },
     {
       "id": "EMJ-003",
@@ -28,7 +39,11 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "emjay-offers skill — listed under Retired Offers",
-      "assert": { "type": "text-absent", "pattern": "midweek\\s+reset", "flags": "i" }
+      "assert": {
+        "type": "text-absent",
+        "pattern": "midweek\\s+reset",
+        "flags": "i"
+      }
     },
     {
       "id": "EMJ-004",
@@ -37,7 +52,13 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "emjay-offers skill — removed during Cleveland-to-Tinana transition",
-      "assert": { "type": "text-absent", "pattern": "gift\\s+(certificate|voucher)s?", "flags": "i" }
+      "assert": {
+        "type": "text-absent",
+        "pattern": "gift\\s+(certificate|voucher)s?",
+        "flags": "i",
+        "excludePaths": "legal"
+      },
+      "note": "Targets gift certificates being marketed as a live offer. Legal pages are excluded: the refund and validity provisions there cover a dormant product whose future is under review and must stay. See GIFT-CLAUSES-PRESENT."
     },
     {
       "id": "EMJ-005",
@@ -47,7 +68,11 @@
       "scope": "site",
       "source": "emjay-offers skill — retired, replaced by I Am At My Limit",
       "note": "'90 minute' legitimately appears inside I Am At My Limit pricing. This asserts only the retired standalone framing.",
-      "assert": { "type": "text-absent", "pattern": "standard\\s+90[\\s-]*min", "flags": "i" }
+      "assert": {
+        "type": "text-absent",
+        "pattern": "standard\\s+90[\\s-]*min",
+        "flags": "i"
+      }
     },
     {
       "id": "EMJ-006",
@@ -57,7 +82,11 @@
       "scope": "site",
       "source": "Confirmed 2026-08: Emjay operates in person at Cleveland QLD and online Australia-wide.",
       "note": "REVERSED 2026-08. This entry previously asserted that Cleveland must be ABSENT, based on skill sources stating a June 2026 closure. Those sources are obsolete. Cleveland is active, so the regression to guard against is Cleveland disappearing from the site, not appearing on it.",
-      "assert": { "type": "text-present", "pattern": "\\bcleveland\\b", "flags": "i" }
+      "assert": {
+        "type": "text-present",
+        "pattern": "\\bcleveland\\b",
+        "flags": "i"
+      }
     },
     {
       "id": "EMJ-031",
@@ -66,7 +95,10 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "Square is pricing source of truth; 60 min is $180 in person",
-      "assert": { "type": "price-accuracy", "defectId": "PRICE-250" }
+      "assert": {
+        "type": "price-accuracy",
+        "defectId": "PRICE-250"
+      }
     },
     {
       "id": "EMJ-032",
@@ -75,7 +107,10 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "Square is pricing source of truth; 90 min is $270",
-      "assert": { "type": "price-accuracy", "defectId": "PRICE-375" }
+      "assert": {
+        "type": "price-accuracy",
+        "defectId": "PRICE-375"
+      }
     },
     {
       "id": "EMJ-033",
@@ -84,7 +119,10 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "Square is pricing source of truth; 2 hr is $360",
-      "assert": { "type": "price-accuracy", "defectId": "PRICE-499" }
+      "assert": {
+        "type": "price-accuracy",
+        "defectId": "PRICE-499"
+      }
     },
     {
       "id": "PROMO-ONLINE-60",
@@ -94,7 +132,10 @@
       "scope": "site",
       "source": "Square: 60 min online $140 promotional until 31 Aug 2026, then $180",
       "note": "Reports INFO while the promotion is running, WARNING in the final fortnight, FAIL once expired. No config change is needed on the expiry date.",
-      "assert": { "type": "price-accuracy", "defectId": "PROMO-ONLINE-60" }
+      "assert": {
+        "type": "price-accuracy",
+        "defectId": "PROMO-ONLINE-60"
+      }
     },
     {
       "id": "EMJ-007",
@@ -103,7 +144,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — sitemap issues",
-      "assert": { "type": "sitemap-reachable" }
+      "assert": {
+        "type": "sitemap-reachable"
+      }
     },
     {
       "id": "EMJ-008",
@@ -112,7 +155,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "Standard launch-regression guard",
-      "assert": { "type": "robots-not-blocking-all" }
+      "assert": {
+        "type": "robots-not-blocking-all"
+      }
     },
     {
       "id": "EMJ-009",
@@ -121,7 +166,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — index/noindex conflicts",
-      "assert": { "type": "no-sitemap-noindex-conflict" }
+      "assert": {
+        "type": "no-sitemap-noindex-conflict"
+      }
     },
     {
       "id": "EMJ-010",
@@ -131,7 +178,11 @@
       "scope": "page",
       "url": "/",
       "source": "Standard launch-regression guard",
-      "assert": { "type": "url-status", "status": 200, "maxHops": 0 }
+      "assert": {
+        "type": "url-status",
+        "status": 200,
+        "maxHops": 0
+      }
     },
     {
       "id": "EMJ-011",
@@ -140,7 +191,11 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — H1/H2 structure",
-      "assert": { "type": "h1-count", "min": 1, "max": 1 }
+      "assert": {
+        "type": "h1-count",
+        "min": 1,
+        "max": 1
+      }
     },
     {
       "id": "EMJ-012",
@@ -149,7 +204,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — empty headings",
-      "assert": { "type": "no-empty-headings" }
+      "assert": {
+        "type": "no-empty-headings"
+      }
     },
     {
       "id": "EMJ-013",
@@ -158,7 +215,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — console errors",
-      "assert": { "type": "no-console-errors" }
+      "assert": {
+        "type": "no-console-errors"
+      }
     },
     {
       "id": "EMJ-014",
@@ -167,7 +226,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — mobile overflow",
-      "assert": { "type": "no-mobile-overflow" }
+      "assert": {
+        "type": "no-mobile-overflow"
+      }
     },
     {
       "id": "EMJ-015",
@@ -176,7 +237,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — canonicals",
-      "assert": { "type": "self-canonical" }
+      "assert": {
+        "type": "self-canonical"
+      }
     },
     {
       "id": "EMJ-016",
@@ -185,7 +248,9 @@
       "severity": "WARN",
       "scope": "site",
       "source": "QA brief 2026-08 — redirect chains / internal linking",
-      "assert": { "type": "no-internal-redirect-links" }
+      "assert": {
+        "type": "no-internal-redirect-links"
+      }
     },
     {
       "id": "EMJ-017",
@@ -194,7 +259,9 @@
       "severity": "WARN",
       "scope": "site",
       "source": "QA brief 2026-08 — generic booking links where specific intent exists",
-      "assert": { "type": "no-generic-only-booking" }
+      "assert": {
+        "type": "no-generic-only-booking"
+      }
     },
     {
       "id": "EMJ-018",
@@ -203,7 +270,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — broken links and HTTP errors",
-      "assert": { "type": "no-broken-links" }
+      "assert": {
+        "type": "no-broken-links"
+      }
     },
     {
       "id": "EMJ-019",
@@ -212,7 +281,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — missing/duplicate titles",
-      "assert": { "type": "unique-titles" }
+      "assert": {
+        "type": "unique-titles"
+      }
     },
     {
       "id": "EMJ-020",
@@ -221,7 +292,9 @@
       "severity": "WARN",
       "scope": "site",
       "source": "QA brief 2026-08 — missing/duplicate meta descriptions",
-      "assert": { "type": "unique-meta-descriptions" }
+      "assert": {
+        "type": "unique-meta-descriptions"
+      }
     },
     {
       "id": "EMJ-021",
@@ -230,7 +303,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — missing alt text",
-      "assert": { "type": "no-missing-alt" }
+      "assert": {
+        "type": "no-missing-alt"
+      }
     },
     {
       "id": "EMJ-022",
@@ -239,7 +314,9 @@
       "severity": "WARN",
       "scope": "site",
       "source": "QA brief 2026-08 — orphan pages",
-      "assert": { "type": "no-orphans" }
+      "assert": {
+        "type": "no-orphans"
+      }
     },
     {
       "id": "EMJ-023",
@@ -248,7 +325,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "QA brief 2026-08 — schema/structured data errors",
-      "assert": { "type": "structured-data-valid" }
+      "assert": {
+        "type": "structured-data-valid"
+      }
     },
     {
       "id": "EMJ-024",
@@ -258,7 +337,9 @@
       "scope": "site",
       "source": "QA brief 2026-08 — forms",
       "note": "Structure only. The suite never submits a form on the live site.",
-      "assert": { "type": "forms-valid" }
+      "assert": {
+        "type": "forms-valid"
+      }
     },
     {
       "id": "EMJ-025",
@@ -267,7 +348,10 @@
       "severity": "FAIL",
       "scope": "external",
       "source": "emjay-offers / emjay-finance — Payhip is a live revenue path",
-      "assert": { "type": "external-url-ok", "url": "https://payhip.com/emjaywellness" }
+      "assert": {
+        "type": "external-url-ok",
+        "url": "https://payhip.com/emjaywellness"
+      }
     },
     {
       "id": "EMJ-026",
@@ -276,7 +360,9 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "Standard launch-regression guard",
-      "assert": { "type": "no-mixed-content" }
+      "assert": {
+        "type": "no-mixed-content"
+      }
     },
     {
       "id": "EMJ-027",
@@ -285,7 +371,11 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "Standard launch-regression guard",
-      "assert": { "type": "text-absent", "pattern": "lorem ipsum|your content goes here|add your text here|sample page|hello world!", "flags": "i" }
+      "assert": {
+        "type": "text-absent",
+        "pattern": "lorem ipsum|your content goes here|add your text here|sample page|hello world!",
+        "flags": "i"
+      }
     },
     {
       "id": "EMJ-028",
@@ -294,7 +384,11 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "Standard launch-regression guard",
-      "assert": { "type": "source-absent", "pattern": "staging\\.|\\.local/|localhost:|wpengine\\.com|\\.wpcomstaging\\.", "flags": "i" }
+      "assert": {
+        "type": "source-absent",
+        "pattern": "staging\\.|\\.local/|localhost:|wpengine\\.com|\\.wpcomstaging\\.",
+        "flags": "i"
+      }
     },
     {
       "id": "EMJ-029",
@@ -303,7 +397,11 @@
       "severity": "FAIL",
       "scope": "site",
       "source": "Standard launch-regression guard",
-      "assert": { "type": "text-absent", "pattern": "Notice: Undefined|Warning: [a-z_]+\\(\\)|Fatal error:|There has been a critical error", "flags": "i" }
+      "assert": {
+        "type": "text-absent",
+        "pattern": "Notice: Undefined|Warning: [a-z_]+\\(\\)|Fatal error:|There has been a critical error",
+        "flags": "i"
+      }
     },
     {
       "id": "EMJ-030",
@@ -312,7 +410,69 @@
       "severity": "WARN",
       "scope": "site",
       "source": "emjay-audience — business name",
-      "assert": { "type": "text-absent", "pattern": "\\bMJ\\s+Wellness\\b|\\bEm\\s+Jay\\b|\\bEmjay\\s+Wellbeing\\b", "flags": "i" }
+      "assert": {
+        "type": "text-absent",
+        "pattern": "\\bMJ\\s+Wellness\\b|\\bEm\\s+Jay\\b|\\bEmjay\\s+Wellbeing\\b",
+        "flags": "i"
+      }
+    },
+    {
+      "id": "EMJ-034",
+      "title": "Viewport must allow pinch-zoom (WCAG 2.2 AA, 1.4.4 Resize Text)",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Confirmed live on every page, 16 August 2026 reconciliation",
+      "openSince": "2026-08-16",
+      "note": "Live value is `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0`. maximum-scale and user-scalable=0 stop a user zooming. For an audience of women 45+ who routinely pinch to enlarge text this is among the more consequential accessibility defects on the site. One theme setting. Correct value: `width=device-width, initial-scale=1.0`.",
+      "assert": {
+        "type": "source-absent",
+        "pattern": "<meta[^>]+name=[\"']viewport[\"'][^>]*(?:maximum-scale\\s*=\\s*1|user-scalable\\s*=\\s*(?:no|0))",
+        "flags": "i"
+      }
+    },
+    {
+      "id": "EMJ-035",
+      "title": "White text on #5F9DA0 must use the approved label colour #1c2224",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Confirmed 16 August 2026 reconciliation",
+      "openSince": "2026-08-16",
+      "note": "White on #5F9DA0 measures 3.08:1 and fails AA. The approved button spec is #1c2224 on #5F9DA0 at 5.23:1, already live on .emjay-btn-primary, .wpw-btn and the Contact form submit. Three rules were never part of that spec and still ship white: .dtb_mobile #dtb-m-menu .dtb-mobile-menu>li:last-of-type>a (mobile menu Book Now, 17px bold), .emjay-btn-secondary:hover, and .et-menu>li.cta-item>a:hover>span. Fix by applying #1c2224 to those three rules. Do NOT change the palette and do NOT substitute #426E70 or #457F81 into button fills: #426E70 is approved for text on pale backgrounds only.",
+      "assert": {
+        "type": "css-pair-absent",
+        "foreground": "#FFFFFF",
+        "background": "#5F9DA0"
+      }
+    },
+    {
+      "id": "RETREAT-CLAUSES-PRESENT",
+      "title": "Retreat provisions must remain on the legal pages",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Superseding instruction from Belinda, 16 August 2026",
+      "note": "Retreats have not been ruled out. Tinana is on a 12 month tenancy and Belinda still owns the property; destination retreats are under consideration. All retreat clauses in the Privacy Policy, Refunds and Returns and Terms and Conditions are to be RETAINED: the Retreat & Workshop Cancellations section and its 60+ day sliding scale, the force majeure clauses, the photography release covering group events and retreats, and 'Educational workshops and retreats' in the Privacy Policy service list. This entry guards against them being tidied away. Forward-looking legal provisions stay; operational claims that Emjay currently runs retreats are a separate matter and are already correctly absent.",
+      "assert": {
+        "type": "text-present",
+        "pattern": "retreat",
+        "flags": "i"
+      }
+    },
+    {
+      "id": "GIFT-CLAUSES-PRESENT",
+      "title": "Gift certificate provisions must remain on the legal pages",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Confirmed 16 August 2026 reconciliation",
+      "note": "Gift products are drafted and dormant rather than deleted, and their future is under review, so the refund and validity provisions stay. EMJ-004 excludes legal pages for this reason: it targets gift certificates being marketed as a live offer, not the terms that cover a dormant one.",
+      "assert": {
+        "type": "text-present",
+        "pattern": "gift\\s+(certificate|voucher)s?",
+        "flags": "i"
+      }
     }
   ]
 }

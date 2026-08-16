@@ -1,6 +1,24 @@
 import { finding } from '../severity.mjs';
 import { jaccard } from '../parse.mjs';
 
+/**
+ * Archive and pagination surfaces (tag/category/author archives, /page/2/).
+ * These are generated listings, not authored pages. A missing description or a
+ * shared title on them is an indexation question, not a content defect, and
+ * counting them alongside real pages inflates the numbers several-fold.
+ */
+function makeIsArchive(cfg) {
+  const patterns = cfg.content?.archivePatterns || [];
+  return (url) => {
+    try {
+      const u = new URL(url);
+      return patterns.some((re) => re.test(u.pathname + u.search));
+    } catch {
+      return false;
+    }
+  };
+}
+
 /** Titles, meta descriptions, canonicals, indexability, heading structure. */
 
 export const titles = {
@@ -9,6 +27,7 @@ export const titles = {
   async run({ site, cfg }) {
     const findings = [];
     const byTitle = new Map();
+    const isArchive = makeIsArchive(cfg);
 
     for (const page of site.htmlPages()) {
       const { title, titles: allTitles } = page.dom;
@@ -51,16 +70,21 @@ export const titles = {
     }
 
     for (const [key, urls] of byTitle) {
-      if (urls.length > 1) {
-        findings.push(finding({
-          severity: 'FAIL',
-          title: `Duplicate title across ${urls.length} pages`,
-          url: urls[0],
-          detail: `"${key}"\n    ${urls.join('\n    ')}`,
-          fix: 'Give each page a distinct title reflecting its own intent.',
-          defectId: 'EMJ-019',
-        }));
-      }
+      if (urls.length < 2) continue;
+      // Blog index pagination shares a title by construction. Only the
+      // authored pages in the group are a real duplicate-title defect.
+      const authored = urls.filter((u) => !isArchive(u));
+      const allArchives = authored.length < 2;
+      findings.push(finding({
+        severity: allArchives ? 'INFO' : 'FAIL',
+        title: `Duplicate title across ${urls.length} pages${allArchives ? ' — archive/pagination surfaces' : ''}`,
+        url: urls[0],
+        detail: `"${key}"\n    ${urls.join('\n    ')}`,
+        fix: allArchives
+          ? 'Expected across paginated archives. Resolve via indexation, not by retitling each page.'
+          : 'Give each page a distinct title reflecting its own intent.',
+        defectId: 'EMJ-019',
+      }));
     }
     return findings;
   },
@@ -73,12 +97,21 @@ export const metaDescriptions = {
     const findings = [];
     const byDesc = new Map();
     const { metaDescriptionMinLength: min, metaDescriptionMaxLength: max } = cfg.thresholds;
+    const isArchive = makeIsArchive(cfg);
+    let archiveMissing = 0;
 
     for (const page of site.htmlPages()) {
       const { metaDescription, metaDescriptions: all, noindex } = page.dom;
       if (noindex) continue; // a noindex page needs no description
 
       if (all.length === 0 || !metaDescription) {
+        // Archives are generated listings. Counting them as missing
+        // descriptions alongside authored pages inflates the number several
+        // times over and hides the handful of real gaps.
+        if (isArchive(page.finalUrl)) {
+          archiveMissing++;
+          continue;
+        }
         findings.push(finding({
           severity: 'WARN', title: 'Missing meta description', url: page.finalUrl,
           fix: 'Write a unique description under 160 characters.', defectId: 'EMJ-020',
@@ -111,13 +144,23 @@ export const metaDescriptions = {
     for (const [key, urls] of byDesc) {
       if (urls.length > 1) {
         findings.push(finding({
-          severity: 'WARN',
+          severity: urls.every(isArchive) ? 'INFO' : 'WARN',
           title: `Duplicate meta description across ${urls.length} pages`,
           url: urls[0],
           detail: `"${key.slice(0, 120)}"\n    ${urls.join('\n    ')}`,
           defectId: 'EMJ-020',
         }));
       }
+    }
+
+    if (archiveMissing) {
+      findings.push(finding({
+        severity: 'INFO',
+        title: `${archiveMissing} archive/pagination page(s) have no meta description`,
+        url: cfg.site.baseUrl,
+        detail: 'Tag, category, author and paginated listings. Excluded from the count above because they are generated surfaces.',
+        fix: 'Resolve as an indexation decision (noindex the archives) rather than by writing descriptions for them.',
+      }));
     }
     return findings;
   },
@@ -379,11 +422,7 @@ export const duplicateAndThin = {
     const findings = [];
     const { thinContentWords, thinContentWordsFail, nearDuplicateSimilarity } = cfg.thresholds;
     const pages = site.htmlPages().filter((p) => !p.dom.noindex);
-    const archivePatterns = cfg.content?.archivePatterns || [];
-    const isArchive = (url) => {
-      const path = new URL(url).pathname + new URL(url).search;
-      return archivePatterns.some((re) => re.test(path));
-    };
+    const isArchive = makeIsArchive(cfg);
 
     for (const page of pages) {
       const words = page.dom.mainWordCount;

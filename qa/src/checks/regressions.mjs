@@ -62,11 +62,17 @@ export function makeRegressionCheck(registry) {
         outcomes.push({ defect, ...outcome });
 
         if (outcome.status === 'regressed') {
+          // "Regressed" means fixed and came back. A defect that has never been
+          // fixed is STILL PRESENT — a first-time or ongoing detection. Calling
+          // that a regression wrongly implies remediation is losing ground.
+          // A defect earns "REGRESSED" only once a verified fix date is recorded.
+          const label = defect.fixedOn ? `REGRESSED (fixed ${defect.fixedOn})` : 'STILL PRESENT';
           findings.push(finding({
             severity: defect.severity,
-            title: `[${defect.id}] REGRESSED: ${defect.title}`,
+            title: `[${defect.id}] ${label}: ${defect.title}`,
             url: outcome.url || null,
-            detail: outcome.detail,
+            detail: [outcome.detail, defect.openSince ? `Open on the register since ${defect.openSince}.` : null]
+              .filter(Boolean).join('\n'),
             fix: defect.note || null,
             defectId: defect.id,
           }));
@@ -138,9 +144,41 @@ async function evaluate(defect, ctx) {
         return { status: 'clear' };
       }
 
+      case 'css-pair-absent': {
+        // A specific foreground/background pairing that must never render.
+        if (!rendered.available) {
+          return { status: 'unknown', detail: `Rendered pass unavailable (${rendered.reason}).` };
+        }
+        const fg = String(a.foreground).toUpperCase();
+        const bg = String(a.background).toUpperCase();
+        for (const [url, rec] of rendered.pages) {
+          for (const sample of rec.desktop?.contrast || []) {
+            if (sample.unmeasurable) continue;
+            if (String(sample.fg).toUpperCase() === fg && String(sample.bg).toUpperCase() === bg) {
+              return {
+                status: 'regressed',
+                url,
+                detail: `${fg} on ${bg} at ${sample.fontSize}px/${sample.fontWeight} — ${sample.selector}\n    "${sample.text}"`,
+              };
+            }
+          }
+        }
+        return { status: 'clear' };
+      }
+
       case 'text-absent': {
         const re = new RegExp(a.pattern, a.flags || '');
+        const legalPatterns = ctx.cfg.content?.legalPagePatterns || [];
         for (const page of site.htmlPages()) {
+          // Forward-looking legal provisions are excluded where the entry says
+          // so, since those clauses must stay even when the product is dormant.
+          if (a.excludePaths === 'legal') {
+            let isLegal = false;
+            try {
+              isLegal = legalPatterns.some((r) => r.test(new URL(page.finalUrl).pathname));
+            } catch { /* keep scanning */ }
+            if (isLegal) continue;
+          }
           const m = page.dom.text.match(re);
           if (m) {
             const start = Math.max(0, m.index - 50);
@@ -156,7 +194,7 @@ async function evaluate(defect, ctx) {
 
       case 'text-present': {
         // Inverse of text-absent: something that must appear somewhere on the
-        // site. Used for facts whose disappearance is the regression.
+        // site. Used for facts and clauses whose disappearance is the defect.
         const re = new RegExp(a.pattern, a.flags || '');
         for (const page of site.htmlPages()) {
           if (re.test(page.dom.text)) return { status: 'clear' };
@@ -270,6 +308,10 @@ export function summariseRegressions(outcomes) {
     severity: defect.severity,
     registryStatus: defect.status,
     result: status === 'clear' ? 'PASS' : status === 'regressed' ? 'FAIL' : 'NOT VERIFIED',
+    // Distinguishes a defect that came back from one never fixed.
+    kind: status !== 'regressed' ? null : defect.fixedOn ? 'REGRESSED' : 'STILL PRESENT',
+    openSince: defect.openSince || null,
+    fixedOn: defect.fixedOn || null,
     detail: detail || '',
     url: url || '',
   }));
