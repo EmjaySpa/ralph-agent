@@ -1,0 +1,281 @@
+{
+  "$schema": "./known-defects.schema.json",
+  "description": "Regression registry. Every defect confirmed on emjaywellness.com.au gets an entry here so it can never silently return. Add a new entry the moment a defect is found; never delete an entry after it is fixed.",
+  "defects": [
+    {
+      "id": "EMJ-001",
+      "title": "Divi default blue #2EA3F2 leaks into rendered styles",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — named explicitly as a rogue colour",
+      "assert": { "type": "colour-absent", "value": "#2EA3F2", "tolerance": 3 }
+    },
+    {
+      "id": "EMJ-002",
+      "title": "Divi default blue #2EA3F2 present in raw HTML/CSS source",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08",
+      "note": "Catches the colour in stylesheets and inline style attributes even where the element is not currently visible.",
+      "assert": { "type": "source-absent", "pattern": "#2ea3f2|rgb\\(\\s*46\\s*,\\s*163\\s*,\\s*242\\s*\\)", "flags": "i" }
+    },
+    {
+      "id": "EMJ-003",
+      "title": "Retired offer 'Midweek Reset' referenced in live copy",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "emjay-offers skill — listed under Retired Offers",
+      "assert": { "type": "text-absent", "pattern": "midweek\\s+reset", "flags": "i" }
+    },
+    {
+      "id": "EMJ-004",
+      "title": "Removed offer 'gift certificates/vouchers' referenced in live copy",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "emjay-offers skill — removed during Cleveland-to-Tinana transition",
+      "assert": { "type": "text-absent", "pattern": "gift\\s+(certificate|voucher)s?", "flags": "i" }
+    },
+    {
+      "id": "EMJ-005",
+      "title": "Retired 'standard 90-minute session' referenced as a bookable offer",
+      "status": "confirmed",
+      "severity": "WARN",
+      "scope": "site",
+      "source": "emjay-offers skill — retired, replaced by I Am At My Limit",
+      "note": "'90 minute' legitimately appears inside I Am At My Limit pricing. This asserts only the retired standalone framing.",
+      "assert": { "type": "text-absent", "pattern": "standard\\s+90[\\s-]*min", "flags": "i" }
+    },
+    {
+      "id": "EMJ-006",
+      "title": "Closed Cleveland location still referenced",
+      "status": "unconfirmed",
+      "severity": "WARN",
+      "scope": "site",
+      "source": "emjay-audience / emjay-ceo say Cleveland closes end June 2026; emjay-brand-voice still lists it active",
+      "note": "SOURCES CONFLICT. Confirm with Bel whether Cleveland is closed. If closed, set status to 'confirmed' and severity to 'FAIL'.",
+      "assert": { "type": "text-absent", "pattern": "\\bcleveland\\b", "flags": "i" }
+    },
+    {
+      "id": "EMJ-007",
+      "title": "Site must expose a reachable XML sitemap",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — sitemap issues",
+      "assert": { "type": "sitemap-reachable" }
+    },
+    {
+      "id": "EMJ-008",
+      "title": "robots.txt must not disallow the whole site",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Standard launch-regression guard",
+      "assert": { "type": "robots-not-blocking-all" }
+    },
+    {
+      "id": "EMJ-009",
+      "title": "No page may be simultaneously in the sitemap and noindex",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — index/noindex conflicts",
+      "assert": { "type": "no-sitemap-noindex-conflict" }
+    },
+    {
+      "id": "EMJ-010",
+      "title": "Homepage must return 200 with no redirect hop",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "page",
+      "url": "/",
+      "source": "Standard launch-regression guard",
+      "assert": { "type": "url-status", "status": 200, "maxHops": 0 }
+    },
+    {
+      "id": "EMJ-011",
+      "title": "Every page must have exactly one H1",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — H1/H2 structure",
+      "assert": { "type": "h1-count", "min": 1, "max": 1 }
+    },
+    {
+      "id": "EMJ-012",
+      "title": "No empty headings anywhere on the site",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — empty headings",
+      "assert": { "type": "no-empty-headings" }
+    },
+    {
+      "id": "EMJ-013",
+      "title": "No JavaScript console errors on any page",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — console errors",
+      "assert": { "type": "no-console-errors" }
+    },
+    {
+      "id": "EMJ-014",
+      "title": "No horizontal overflow at 390px viewport",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — mobile overflow",
+      "assert": { "type": "no-mobile-overflow" }
+    },
+    {
+      "id": "EMJ-015",
+      "title": "Every page declares a self-referencing canonical",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — canonicals",
+      "assert": { "type": "self-canonical" }
+    },
+    {
+      "id": "EMJ-016",
+      "title": "No internal link may point at a redirecting URL",
+      "status": "confirmed",
+      "severity": "WARN",
+      "scope": "site",
+      "source": "QA brief 2026-08 — redirect chains / internal linking",
+      "assert": { "type": "no-internal-redirect-links" }
+    },
+    {
+      "id": "EMJ-017",
+      "title": "Service pages must not offer only a generic booking link",
+      "status": "confirmed",
+      "severity": "WARN",
+      "scope": "site",
+      "source": "QA brief 2026-08 — generic booking links where specific intent exists",
+      "assert": { "type": "no-generic-only-booking" }
+    },
+    {
+      "id": "EMJ-018",
+      "title": "No broken internal or external links",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — broken links and HTTP errors",
+      "assert": { "type": "no-broken-links" }
+    },
+    {
+      "id": "EMJ-019",
+      "title": "No missing or duplicate <title> across the site",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — missing/duplicate titles",
+      "assert": { "type": "unique-titles" }
+    },
+    {
+      "id": "EMJ-020",
+      "title": "No missing or duplicate meta descriptions across the site",
+      "status": "confirmed",
+      "severity": "WARN",
+      "scope": "site",
+      "source": "QA brief 2026-08 — missing/duplicate meta descriptions",
+      "assert": { "type": "unique-meta-descriptions" }
+    },
+    {
+      "id": "EMJ-021",
+      "title": "All content images carry alt text",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — missing alt text",
+      "assert": { "type": "no-missing-alt" }
+    },
+    {
+      "id": "EMJ-022",
+      "title": "No orphan pages (in sitemap, zero internal inbound links)",
+      "status": "confirmed",
+      "severity": "WARN",
+      "scope": "site",
+      "source": "QA brief 2026-08 — orphan pages",
+      "assert": { "type": "no-orphans" }
+    },
+    {
+      "id": "EMJ-023",
+      "title": "Structured data parses and carries required properties",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — schema/structured data errors",
+      "assert": { "type": "structured-data-valid" }
+    },
+    {
+      "id": "EMJ-024",
+      "title": "Enquiry/booking forms are structurally complete and labelled",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "QA brief 2026-08 — forms",
+      "note": "Structure only. The suite never submits a form on the live site.",
+      "assert": { "type": "forms-valid" }
+    },
+    {
+      "id": "EMJ-025",
+      "title": "Payhip shop link resolves (digital product revenue path)",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "external",
+      "source": "emjay-offers / emjay-finance — Payhip is a live revenue path",
+      "assert": { "type": "external-url-ok", "url": "https://payhip.com/emjaywellness" }
+    },
+    {
+      "id": "EMJ-026",
+      "title": "No mixed content (http:// subresources on an https page)",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Standard launch-regression guard",
+      "assert": { "type": "no-mixed-content" }
+    },
+    {
+      "id": "EMJ-027",
+      "title": "No WordPress/Divi placeholder or lorem text shipped live",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Standard launch-regression guard",
+      "assert": { "type": "text-absent", "pattern": "lorem ipsum|your content goes here|add your text here|sample page|hello world!", "flags": "i" }
+    },
+    {
+      "id": "EMJ-028",
+      "title": "No staging/dev host references leaked into live markup",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Standard launch-regression guard",
+      "assert": { "type": "source-absent", "pattern": "staging\\.|\\.local/|localhost:|wpengine\\.com|\\.wpcomstaging\\.", "flags": "i" }
+    },
+    {
+      "id": "EMJ-029",
+      "title": "No PHP notices/warnings or WordPress fatal errors rendered on any page",
+      "status": "confirmed",
+      "severity": "FAIL",
+      "scope": "site",
+      "source": "Standard launch-regression guard",
+      "assert": { "type": "text-absent", "pattern": "Notice: Undefined|Warning: [a-z_]+\\(\\)|Fatal error:|There has been a critical error", "flags": "i" }
+    },
+    {
+      "id": "EMJ-030",
+      "title": "Business name spelled consistently as 'Emjay Wellness'",
+      "status": "confirmed",
+      "severity": "WARN",
+      "scope": "site",
+      "source": "emjay-audience — business name",
+      "assert": { "type": "text-absent", "pattern": "\\bMJ\\s+Wellness\\b|\\bEm\\s+Jay\\b|\\bEmjay\\s+Wellbeing\\b", "flags": "i" }
+    }
+  ]
+}

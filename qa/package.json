@@ -1,0 +1,24 @@
+{
+  "name": "emjay-qa",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent automated QA regression suite for emjaywellness.com.au. Read-only.",
+  "bin": {
+    "emjay-qa": "./src/index.mjs"
+  },
+  "scripts": {
+    "qa": "node src/index.mjs",
+    "qa:static": "node src/index.mjs --no-render",
+    "qa:smoke": "node src/index.mjs --max-pages 15",
+    "selftest": "node --test tests/*.test.mjs",
+    "demo": "node scripts/demo.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "playwright": "^1.56.1"
+  }
+}
